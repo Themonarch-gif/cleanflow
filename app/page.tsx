@@ -175,17 +175,15 @@ export default function Home() {
       <nav className="border-b border-slate-800/80">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <button
-            onClick={resetApp}
-            className="flex items-center gap-3"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold shadow-lg shadow-blue-600/20">
-              C
-            </div>
-
-            <span className="text-xl font-bold">
-              CleanFlow
-            </span>
-          </button>
+  onClick={resetApp}
+  className="flex items-center"
+>
+  <img
+    src="/cleanflow-logo.png"
+    alt="CleanFlow"
+    className="h-12 w-auto object-contain"
+  />
+</button>
 
           <button
             onClick={() =>
