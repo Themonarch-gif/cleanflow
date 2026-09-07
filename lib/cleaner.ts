@@ -5,6 +5,7 @@ export interface CleaningOptions {
   trimWhitespace: boolean;
   normalizeCapitalization: boolean;
   lowercaseEmails: boolean;
+  normalizePhones: boolean;
   removeEmptyColumns: boolean;
   removeEmptyRows: boolean;
   duplicateMode: "row" | "email" | "phone";
@@ -48,7 +49,7 @@ export function cleanCSV(
       before - workingData.length;
   }
 
-  // ----------------------------------------
+    // ----------------------------------------
   // 2. Remove duplicate rows
   // ----------------------------------------
 
@@ -61,28 +62,53 @@ export function cleanCSV(
     for (const row of workingData) {
       let signature = "";
 
+      // ----------------------------------------
+      // Duplicate by email
+      // ----------------------------------------
+
       if (options.duplicateMode === "email") {
         const emailColumn = columns.find((column) =>
           column.toLowerCase().includes("email")
         );
 
-        signature = emailColumn
-          ? String(row[emailColumn] ?? "")
-              .trim()
-              .toLowerCase()
-          : columns
-              .map((column) =>
-                String(row[column] ?? "")
-                  .trim()
-                  .toLowerCase()
-              )
-              .join("|");
-      } else if (
+        if (emailColumn) {
+          const email = String(
+            row[emailColumn] ?? ""
+          )
+            .trim()
+            .toLowerCase();
+
+          // Only use email as a duplicate key
+          // when an email actually exists.
+          if (email !== "") {
+            signature = `email:${email}`;
+          }
+        }
+
+        // If there is no usable email,
+        // fall back to the entire row.
+        if (signature === "") {
+          signature = columns
+            .map((column) =>
+              String(row[column] ?? "")
+                .trim()
+                .toLowerCase()
+            )
+            .join("|");
+        }
+      }
+
+      // ----------------------------------------
+      // Duplicate by phone
+      // ----------------------------------------
+
+      else if (
         options.duplicateMode === "phone"
       ) {
         const phoneColumn = columns.find(
           (column) => {
-            const name = column.toLowerCase();
+            const name =
+              column.toLowerCase();
 
             return (
               name.includes("phone") ||
@@ -92,17 +118,36 @@ export function cleanCSV(
           }
         );
 
-        signature = phoneColumn
-          ? String(row[phoneColumn] ?? "")
-              .replace(/\D/g, "")
-          : columns
-              .map((column) =>
-                String(row[column] ?? "")
-                  .trim()
-                  .toLowerCase()
-              )
-              .join("|");
-      } else {
+        if (phoneColumn) {
+          const phone = String(
+            row[phoneColumn] ?? ""
+          ).replace(/\D/g, "");
+
+          // Only use phone as a duplicate key
+          // when a phone number actually exists.
+          if (phone !== "") {
+            signature = `phone:${phone}`;
+          }
+        }
+
+        // If there is no usable phone number,
+        // fall back to the entire row.
+        if (signature === "") {
+          signature = columns
+            .map((column) =>
+              String(row[column] ?? "")
+                .trim()
+                .toLowerCase()
+            )
+            .join("|");
+        }
+      }
+
+      // ----------------------------------------
+      // Duplicate by entire row
+      // ----------------------------------------
+
+      else {
         signature = columns
           .map((column) =>
             String(row[column] ?? "")
@@ -111,6 +156,10 @@ export function cleanCSV(
           )
           .join("|");
       }
+
+      // ----------------------------------------
+      // Check for duplicate
+      // ----------------------------------------
 
       if (
         signature !== "" &&
@@ -202,6 +251,38 @@ export function cleanCSV(
           finalValue = normalized;
         }
       }
+
+     // Normalize phone numbers
+if (
+  options.normalizePhones &&
+  (
+    lowerColumn.includes("phone") ||
+    lowerColumn.includes("mobile") ||
+    lowerColumn.includes("telephone")
+  ) &&
+  finalValue !== ""
+) {
+  let normalized = finalValue.replace(/\D/g, "");
+
+  // Nigeria-aware normalization
+  if (normalized.startsWith("234")) {
+    normalized = `+${normalized}`;
+  } else if (
+    normalized.startsWith("0") &&
+    normalized.length === 11
+  ) {
+    normalized = `+234${normalized.slice(1)}`;
+  } else if (
+    normalized.length === 10
+  ) {
+    normalized = `+234${normalized}`;
+  }
+
+  if (normalized !== finalValue) {
+    normalizedCells++;
+    finalValue = normalized;
+  }
+}
 
       // --------------------------------------
       // Normalize ordinary text

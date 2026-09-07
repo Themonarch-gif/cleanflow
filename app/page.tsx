@@ -19,6 +19,7 @@ const defaultOptions: CleaningOptions = {
   trimWhitespace: true,
   normalizeCapitalization: true,
   lowercaseEmails: true,
+  normalizePhones: true,
   removeEmptyColumns: true,
   removeEmptyRows: false,
   duplicateMode: "row",
@@ -63,11 +64,71 @@ export default function Home() {
     setCleaningResult(null);
     setOptions(defaultOptions);
     setShowControls(true);
+  };
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+  const loadSampleCSV = () => {
+    const sampleData: CSVRow[] = [
+      {
+        Name: " John Smith ",
+        Email: "JOHN.SMITH@EXAMPLE.COM",
+        Phone: "(080) 123-4567",
+        City: "lagos",
+      },
+      {
+        Name: "Mary Johnson",
+        Email: "mary.johnson@example.com",
+        Phone: "080 234 5678",
+        City: "Abuja",
+      },
+      {
+        Name: "John Smith",
+        Email: "JOHN.SMITH@EXAMPLE.COM",
+        Phone: "0801234567",
+        City: "LAGOS",
+      },
+      {
+        Name: " david williams ",
+        Email: "david.williams@example.com",
+        Phone: "080-345-6789",
+        City: "ibadan",
+      },
+      {
+        Name: "Sarah Brown",
+        Email: "sarah.brown@example",
+        Phone: "080 456 7890",
+        City: "Port Harcourt",
+      },
+      {
+        Name: "Michael Davis",
+        Email: " michael.davis@example.com ",
+        Phone: "(080) 567-8901",
+        City: "kano",
+      },
+    ];
+
+    const detectedColumns = Object.keys(sampleData[0]);
+
+    const result = analyzeCSV(
+      sampleData,
+      detectedColumns
+    );
+
+    setData(sampleData);
+    setColumns(detectedColumns);
+    setFileName("cleanflow-sample.csv");
+    setAnalysis(result);
+    setCleaningResult(null);
+    setOptions(defaultOptions);
+    setShowControls(true);
+
+        setTimeout(() => {
+      document
+        .getElementById("analysis")
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    }, 100);
   };
 
   const updateOption = <
@@ -223,9 +284,24 @@ export default function Home() {
             spreadsheet issues in seconds.
           </p>
 
-          <FileUploader
-            onFileLoaded={handleFileLoaded}
-          />
+          <div className="mx-auto max-w-2xl">
+  <FileUploader
+    onFileLoaded={handleFileLoaded}
+  />
+
+  <div className="mt-4 flex items-center justify-center">
+    <button
+      onClick={loadSampleCSV}
+      className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-blue-500/50 hover:bg-slate-800 hover:text-white"
+    >
+      Try a sample CSV
+    </button>
+  </div>
+
+  <p className="mt-3 text-center text-xs text-slate-500">
+    No file? Try CleanFlow with sample data first.
+  </p>
+</div>
         </section>
       )}
 
@@ -234,7 +310,9 @@ export default function Home() {
       ================================= */}
 
       {analysis && (
-        <section className="mx-auto max-w-6xl px-6 pb-24 pt-12">
+        <section
+          id="analysis"
+          className="mx-auto max-w-6xl px-6 pb-24 pt-12">
           {/* FILE HEADER */}
 
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -492,6 +570,20 @@ export default function Home() {
                   />
 
                   <CleaningCheckbox
+  checked={
+    options.normalizePhones
+  }
+  onChange={(value) =>
+    updateOption(
+      "normalizePhones",
+      value
+    )
+  }
+  title="Normalize phone numbers"
+  description="Remove unnecessary spaces, brackets, and symbols from phone numbers."
+/>
+
+                  <CleaningCheckbox
                     checked={
                       options.removeEmptyColumns
                     }
@@ -641,45 +733,45 @@ export default function Home() {
                   />
                 </div>
 
-                {/* CHANGE CARDS */}
+                {/* CHANGE SUMMARY */}
 
-                <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <ChangeCard
-                    icon="↔"
-                    title="Duplicates removed"
-                    value={
-                      cleaningResult
-                        .removedDuplicates
-                    }
-                  />
+<div className="mt-8">
+  <div className="mb-4">
+    <h3 className="text-xl font-bold">
+      Cleaning summary
+    </h3>
 
-                  <ChangeCard
-                    icon="T"
-                    title="Spaces fixed"
-                    value={
-                      cleaningResult
-                        .trimmedCells
-                    }
-                  />
+    <p className="mt-1 text-sm text-slate-500">
+      Here is exactly what CleanFlow changed.
+    </p>
+  </div>
 
-                  <ChangeCard
-                    icon="A"
-                    title="Values normalized"
-                    value={
-                      cleaningResult
-                        .normalizedCells
-                    }
-                  />
+  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <ChangeCard
+      icon="↔"
+      title="Duplicates removed"
+      value={cleaningResult.removedDuplicates}
+    />
 
-                  <ChangeCard
-                    icon="□"
-                    title="Empty rows removed"
-                    value={
-                      cleaningResult
-                        .removedEmptyRows
-                    }
-                  />
-                </div>
+    <ChangeCard
+      icon="T"
+      title="Spaces fixed"
+      value={cleaningResult.trimmedCells}
+    />
+
+    <ChangeCard
+      icon="A"
+      title="Values normalized"
+      value={cleaningResult.normalizedCells}
+    />
+
+    <ChangeCard
+      icon="□"
+      title="Empty rows removed"
+      value={cleaningResult.removedEmptyRows}
+    />
+  </div>
+</div>
 
                 {/* REMOVED COLUMNS */}
 

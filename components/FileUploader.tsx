@@ -9,6 +9,8 @@ interface FileUploaderProps {
   onFileLoaded: (data: CSVRow[], fileName: string) => void;
 }
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 export default function FileUploader({
   onFileLoaded,
 }: FileUploaderProps) {
@@ -19,10 +21,29 @@ export default function FileUploader({
   const processFile = (file: File) => {
     setError("");
 
+    // ----------------------------------------
+    // 1. Check file type
+    // ----------------------------------------
+
     if (!file.name.toLowerCase().endsWith(".csv")) {
       setError("Please choose a CSV file.");
       return;
     }
+
+    // ----------------------------------------
+    // 2. Check file size
+    // ----------------------------------------
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError(
+        "This file is too large. Please choose a CSV file smaller than 10 MB."
+      );
+      return;
+    }
+
+    // ----------------------------------------
+    // 3. Process CSV
+    // ----------------------------------------
 
     setIsProcessing(true);
 
@@ -34,7 +55,10 @@ export default function FileUploader({
         setIsProcessing(false);
 
         if (results.errors.length > 0) {
-          console.warn("CSV parsing warnings:", results.errors);
+          console.warn(
+            "CSV parsing warnings:",
+            results.errors
+          );
         }
 
         if (results.data.length === 0) {
@@ -47,7 +71,9 @@ export default function FileUploader({
 
       error: (error) => {
         setIsProcessing(false);
-        setError(`Could not read the CSV file: ${error.message}`);
+        setError(
+          `Could not read the CSV file: ${error.message}`
+        );
       },
     });
   };
@@ -60,9 +86,14 @@ export default function FileUploader({
     if (file) {
       processFile(file);
     }
+
+    // Allow selecting the same file again
+    event.target.value = "";
   };
 
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (
+    event: React.DragEvent<HTMLDivElement>
+  ) => {
     event.preventDefault();
 
     setIsDragging(false);
@@ -89,7 +120,7 @@ export default function FileUploader({
       onDrop={handleDrop}
     >
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600/10 text-3xl">
-        {isProcessing ? "⏳" : "📁"}
+        {isProcessing ? "..." : "CSV"}
       </div>
 
       <h2 className="mt-6 text-xl font-semibold">
@@ -124,6 +155,10 @@ export default function FileUploader({
       )}
 
       <p className="mt-4 text-xs text-slate-500">
+        Maximum file size: 10 MB
+      </p>
+
+      <p className="mt-1 text-xs text-slate-500">
         Your file is processed locally in your browser.
       </p>
     </div>

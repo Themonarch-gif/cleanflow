@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CleanFlow — Clean Your CSV Data",
   description:
-    "Clean, analyze and improve your CSV files in seconds. Detect duplicates, missing values, formatting issues and more.",
+    "Clean, analyze, and improve your CSV spreadsheets instantly. Your data is processed locally in your browser.",
   applicationName: "CleanFlow",
   keywords: [
     "CSV cleaner",
