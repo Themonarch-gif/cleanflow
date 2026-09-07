@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 type CSVRow = Record<string, string>;
 
 interface FileUploaderProps {
   onFileLoaded: (data: CSVRow[], fileName: string) => void;
 }
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function FileUploader({
   onFileLoaded,
@@ -21,31 +20,96 @@ export default function FileUploader({
   const processFile = (file: File) => {
     setError("");
 
-    // ----------------------------------------
-    // 1. Check file type
-    // ----------------------------------------
+    const fileName = file.name.toLowerCase();
 
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      setError("Please choose a CSV file.");
-      return;
-    }
+    const isCSV = fileName.endsWith(".csv");
+    const isExcel =
+      fileName.endsWith(".xlsx") ||
+      fileName.endsWith(".xls");
 
-    // ----------------------------------------
-    // 2. Check file size
-    // ----------------------------------------
-
-    if (file.size > MAX_FILE_SIZE) {
+    if (!isCSV && !isExcel) {
       setError(
-        "This file is too large. Please choose a CSV file smaller than 10 MB."
+        "Please choose a CSV or Excel file (.csv, .xlsx, or .xls)."
       );
       return;
     }
 
+    setIsProcessing(true);
+
     // ----------------------------------------
-    // 3. Process CSV
+    // Excel files
     // ----------------------------------------
 
-    setIsProcessing(true);
+    if (isExcel) {
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        try {
+          const arrayBuffer = event.target?.result;
+
+          if (!(arrayBuffer instanceof ArrayBuffer)) {
+            throw new Error("Could not read the Excel file.");
+          }
+
+          const workbook = XLSX.read(arrayBuffer, {
+            type: "array",
+          });
+
+          if (workbook.SheetNames.length === 0) {
+            throw new Error(
+              "This Excel file does not contain any worksheets."
+            );
+          }
+
+          // Use the first worksheet
+          const firstSheetName =
+            workbook.SheetNames[0];
+
+          const worksheet =
+            workbook.Sheets[firstSheetName];
+
+          const data = XLSX.utils.sheet_to_json<
+            CSVRow
+          >(worksheet, {
+            defval: "",
+            raw: false,
+          });
+
+          if (data.length === 0) {
+            setError(
+              "This Excel file appears to be empty."
+            );
+            setIsProcessing(false);
+            return;
+          }
+
+          setIsProcessing(false);
+
+          onFileLoaded(data, file.name);
+        } catch (error) {
+          setIsProcessing(false);
+
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Could not read the Excel file."
+          );
+        }
+      };
+
+      reader.onerror = () => {
+        setIsProcessing(false);
+        setError("Could not read the Excel file.");
+      };
+
+      reader.readAsArrayBuffer(file);
+
+      return;
+    }
+
+    // ----------------------------------------
+    // CSV files
+    // ----------------------------------------
 
     Papa.parse<CSVRow>(file, {
       header: true,
@@ -62,15 +126,21 @@ export default function FileUploader({
         }
 
         if (results.data.length === 0) {
-          setError("This CSV file appears to be empty.");
+          setError(
+            "This CSV file appears to be empty."
+          );
           return;
         }
 
-        onFileLoaded(results.data, file.name);
+        onFileLoaded(
+          results.data,
+          file.name
+        );
       },
 
       error: (error) => {
         setIsProcessing(false);
+
         setError(
           `Could not read the CSV file: ${error.message}`
         );
@@ -87,7 +157,6 @@ export default function FileUploader({
       processFile(file);
     }
 
-    // Allow selecting the same file again
     event.target.value = "";
   };
 
@@ -98,7 +167,8 @@ export default function FileUploader({
 
     setIsDragging(false);
 
-    const file = event.dataTransfer.files?.[0];
+    const file =
+      event.dataTransfer.files?.[0];
 
     if (file) {
       processFile(file);
@@ -116,17 +186,19 @@ export default function FileUploader({
         event.preventDefault();
         setIsDragging(true);
       }}
-      onDragLeave={() => setIsDragging(false)}
+      onDragLeave={() =>
+        setIsDragging(false)
+      }
       onDrop={handleDrop}
     >
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600/10 text-3xl">
-        {isProcessing ? "..." : "CSV"}
+        {isProcessing ? "⏳" : "📄"}
       </div>
 
       <h2 className="mt-6 text-xl font-semibold">
         {isProcessing
-          ? "Processing your CSV..."
-          : "Drop your CSV file here"}
+          ? "Processing your file..."
+          : "Drop your CSV or Excel file here"}
       </h2>
 
       <p className="mt-2 text-sm text-slate-400">
@@ -137,11 +209,11 @@ export default function FileUploader({
 
       {!isProcessing && (
         <label className="mt-6 inline-flex cursor-pointer items-center rounded-xl bg-blue-600 px-6 py-3 font-medium transition hover:bg-blue-500">
-          Choose CSV file
+          Choose file
 
           <input
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             className="hidden"
             onChange={handleFileChange}
           />
@@ -155,11 +227,8 @@ export default function FileUploader({
       )}
 
       <p className="mt-4 text-xs text-slate-500">
-        Maximum file size: 10 MB
-      </p>
-
-      <p className="mt-1 text-xs text-slate-500">
-        Your file is processed locally in your browser.
+        CSV and Excel files are processed locally
+        in your browser.
       </p>
     </div>
   );
