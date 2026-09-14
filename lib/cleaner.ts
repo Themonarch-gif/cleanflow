@@ -1,4 +1,5 @@
 import { CSVRow } from "./analyzer";
+import * as XLSX from "xlsx";
 
 export interface CleaningOptions {
   removeDuplicates: boolean;
@@ -6,9 +7,30 @@ export interface CleaningOptions {
   normalizeCapitalization: boolean;
   lowercaseEmails: boolean;
   normalizePhones: boolean;
+  standardizeDates: boolean;
+  normalizeHeaders: boolean;
   removeEmptyColumns: boolean;
   removeEmptyRows: boolean;
-  duplicateMode: "row" | "email" | "phone";
+
+  findText: string;
+  replaceText: string;
+  findCaseSensitive: boolean;
+  findWholeCell: boolean;
+
+  duplicateMode:
+  | "row"
+  | "email"
+  | "phone"
+  | "columns";
+
+  duplicateColumns: string[];
+}
+
+export interface DuplicateGroup {
+  key: string;
+  columns: string[];
+  rowIndexes: number[];
+  count: number;
 }
 
 export interface CleaningResult {
@@ -16,8 +38,145 @@ export interface CleaningResult {
   removedDuplicates: number;
   trimmedCells: number;
   normalizedCells: number;
+  normalizedEmails: number;
+  normalizedPhones: number;
+  normalizedText: number;
+  standardizedDates: number;
+  normalizedHeaders: number;
+  findReplaceCount: number;
   removedColumns: string[];
   removedEmptyRows: number;
+  duplicateGroups: DuplicateGroup[];
+}
+
+function formatDateParts(
+  year: number,
+  month: number,
+  day: number
+): string | null {
+  if (
+    year < 1000 ||
+    year > 9999 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null;
+  }
+
+  const date = new Date(
+    Date.UTC(year, month - 1, day)
+  );
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return `${year.toString().padStart(4, "0")}-${month
+    .toString()
+    .padStart(2, "0")}-${day
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+function standardizeDate(
+  value: string
+): string | null {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  // Already ISO format.
+  const isoMatch = trimmed.match(
+    /^(\d{4})-(\d{2})-(\d{2})$/
+  );
+
+  if (isoMatch) {
+    return formatDateParts(
+      Number(isoMatch[1]),
+      Number(isoMatch[2]),
+      Number(isoMatch[3])
+    );
+  }
+
+  // Unambiguous YYYY/MM/DD or YYYY-MM-DD.
+  const yearFirstMatch = trimmed.match(
+    /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/
+  );
+
+  if (yearFirstMatch) {
+    return formatDateParts(
+      Number(yearFirstMatch[1]),
+      Number(yearFirstMatch[2]),
+      Number(yearFirstMatch[3])
+    );
+  }
+
+  // Unambiguous DD/MM/YYYY or DD-MM-YYYY
+  // where the first number is greater than 12.
+  const dayFirstMatch = trimmed.match(
+    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/
+  );
+
+  if (dayFirstMatch) {
+    const first = Number(dayFirstMatch[1]);
+    const second = Number(dayFirstMatch[2]);
+    const year = Number(dayFirstMatch[3]);
+
+    if (first > 12 && second <= 12) {
+      return formatDateParts(
+        year,
+        second,
+        first
+      );
+    }
+
+    // If the second number is greater than 12,
+    // the format must be MM/DD/YYYY.
+    if (second > 12 && first <= 12) {
+      return formatDateParts(
+        year,
+        first,
+        second
+      );
+    }
+
+    // 03/04/2026 is ambiguous.
+    // Do not guess.
+    return null;
+  }
+
+  // Month-name dates.
+  const timestamp = Date.parse(trimmed);
+
+  if (Number.isNaN(timestamp)) {
+    return null;
+  }
+
+  const date = new Date(timestamp);
+
+  return formatDateParts(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    date.getDate()
+  );
+}
+
+function normalizeHeader(header: string): string {
+  return header
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
 }
 
 export function cleanCSV(
@@ -27,9 +186,70 @@ export function cleanCSV(
 ): CleaningResult {
   let trimmedCells = 0;
   let normalizedCells = 0;
+  let normalizedEmails = 0;
+  let normalizedPhones = 0;
+  let normalizedText = 0;
+  let standardizedDates = 0;
+  let normalizedHeaders = 0;
+  let findReplaceCount = 0;
   let removedEmptyRows = 0;
 
   let workingData = [...data];
+
+    // ----------------------------------------
+  // 0. Normalize column headers
+  // ----------------------------------------
+
+  let workingColumns = [...columns];
+
+  if (options.normalizeHeaders) {
+    const normalizedColumns = workingColumns.map(
+      normalizeHeader
+    );
+
+    const headerMap = new Map<string, string>();
+
+    normalizedColumns.forEach((header, index) => {
+      const originalHeader = workingColumns[index];
+
+      let finalHeader = header;
+
+      // Prevent duplicate column names.
+      if (headerMap.has(finalHeader)) {
+        let suffix = 2;
+
+        while (
+          headerMap.has(`${header}_${suffix}`)
+        ) {
+          suffix++;
+        }
+
+        finalHeader = `${header}_${suffix}`;
+      }
+      
+      if (finalHeader !== originalHeader) {
+        normalizedHeaders++;
+      }
+
+      headerMap.set(finalHeader, originalHeader);
+      workingColumns[index] = finalHeader;
+    });
+
+    workingData = workingData.map((row) => {
+      const normalizedRow: CSVRow = {};
+
+      workingColumns.forEach(
+        (normalizedHeader, index) => {
+          const originalHeader = columns[index];
+
+          normalizedRow[normalizedHeader] =
+            row[originalHeader] ?? "";
+        }
+      );
+
+      return normalizedRow;
+    });
+  }
 
   // ----------------------------------------
   // 1. Remove completely empty rows
@@ -39,7 +259,7 @@ export function cleanCSV(
     const before = workingData.length;
 
     workingData = workingData.filter((row) => {
-      return columns.some(
+      return workingColumns.some(
         (column) =>
           String(row[column] ?? "").trim() !== ""
       );
@@ -55,11 +275,24 @@ export function cleanCSV(
 
   let removedDuplicates = 0;
 
+  const duplicateGroups = new Map<
+  string,
+  {
+    columns: string[];
+    rowIndexes: number[];
+  }
+>();
+
   if (options.removeDuplicates) {
     const seen = new Set<string>();
     const uniqueRows: CSVRow[] = [];
 
-    for (const row of workingData) {
+    for (
+  let rowIndex = 0;
+  rowIndex < workingData.length;
+  rowIndex++
+) {
+  const row = workingData[rowIndex];
       let signature = "";
 
       // ----------------------------------------
@@ -67,7 +300,7 @@ export function cleanCSV(
       // ----------------------------------------
 
       if (options.duplicateMode === "email") {
-        const emailColumn = columns.find((column) =>
+        const emailColumn = workingColumns.find((column) =>
           column.toLowerCase().includes("email")
         );
 
@@ -88,7 +321,7 @@ export function cleanCSV(
         // If there is no usable email,
         // fall back to the entire row.
         if (signature === "") {
-          signature = columns
+          signature = workingColumns
             .map((column) =>
               String(row[column] ?? "")
                 .trim()
@@ -105,7 +338,7 @@ export function cleanCSV(
       else if (
         options.duplicateMode === "phone"
       ) {
-        const phoneColumn = columns.find(
+        const phoneColumn = workingColumns.find(
           (column) => {
             const name =
               column.toLowerCase();
@@ -133,7 +366,7 @@ export function cleanCSV(
         // If there is no usable phone number,
         // fall back to the entire row.
         if (signature === "") {
-          signature = columns
+          signature = workingColumns
             .map((column) =>
               String(row[column] ?? "")
                 .trim()
@@ -144,23 +377,76 @@ export function cleanCSV(
       }
 
       // ----------------------------------------
-      // Duplicate by entire row
-      // ----------------------------------------
+// Duplicate by selected columns
+// ----------------------------------------
 
-      else {
-        signature = columns
-          .map((column) =>
-            String(row[column] ?? "")
-              .trim()
-              .toLowerCase()
-          )
-          .join("|");
-      }
+else if (
+  options.duplicateMode === "columns"
+) {
+  const selectedColumns =
+    options.duplicateColumns.filter(
+      column => workingColumns.includes(column)
+    );
+
+  if (selectedColumns.length > 0) {
+    signature = selectedColumns
+      .map((column) =>
+        String(row[column] ?? "")
+          .trim()
+          .toLowerCase()
+      )
+      .join("\u001F");
+  } else {
+    // No columns selected:
+    // safely fall back to the entire row.
+    signature = workingColumns
+      .map((column) =>
+        String(row[column] ?? "")
+          .trim()
+          .toLowerCase()
+      )
+      .join("\u001F");
+  }
+}
+
+// ----------------------------------------
+// Duplicate by entire row
+// ----------------------------------------
+
+else {
+  signature = workingColumns
+    .map((column) =>
+      String(row[column] ?? "")
+        .trim()
+        .toLowerCase()
+    )
+    .join("\u001F");
+}
 
       // ----------------------------------------
       // Check for duplicate
       // ----------------------------------------
 
+      if (signature !== "") {
+  const existing =
+    duplicateGroups.get(signature);
+
+  if (existing) {
+    existing.rowIndexes.push(rowIndex);
+  } else {
+    duplicateGroups.set(signature, {
+      columns:
+  options.duplicateMode === "columns"
+    ? options.duplicateColumns.filter(
+        (column) =>
+          workingColumns.includes(column)
+      )
+    : [...workingColumns],
+      rowIndexes: [rowIndex],
+    });
+  }
+}
+      
       if (
         signature !== "" &&
         seen.has(signature)
@@ -182,10 +468,10 @@ export function cleanCSV(
 
   const removedColumns: string[] = [];
 
-  let usefulColumns = [...columns];
+  let usefulColumns = [...workingColumns];
 
   if (options.removeEmptyColumns) {
-    usefulColumns = columns.filter((column) => {
+    usefulColumns = workingColumns.filter((column) => {
       const hasValue = workingData.some(
         (row) =>
           String(row[column] ?? "").trim() !== ""
@@ -234,6 +520,80 @@ export function cleanCSV(
       const lowerColumn =
         column.toLowerCase();
 
+// --------------------------------------
+// Find & Replace
+// --------------------------------------
+
+if (
+  options.findText !== "" &&
+  finalValue !== ""
+) {
+  const searchText = options.findText;
+
+  if (options.findWholeCell) {
+    const matches = options.findCaseSensitive
+      ? finalValue === searchText
+      : finalValue.toLowerCase() ===
+        searchText.toLowerCase();
+
+    if (matches) {
+      finalValue = options.replaceText;
+      findReplaceCount++;
+    }
+  } else {
+    const originalValue = finalValue;
+
+    if (options.findCaseSensitive) {
+      finalValue = finalValue.replaceAll(
+        searchText,
+        options.replaceText
+      );
+    } else {
+      const escapedSearch = searchText.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+
+      finalValue = finalValue.replace(
+        new RegExp(escapedSearch, "gi"),
+        options.replaceText
+      );
+    }
+
+    if (finalValue !== originalValue) {
+      findReplaceCount++;
+    }
+  }
+}
+
+            // --------------------------------------
+      // Standardize dates
+      // --------------------------------------
+
+      if (
+        options.standardizeDates &&
+        finalValue !== "" &&
+        (
+          lowerColumn.includes("date") ||
+          lowerColumn.includes("dob") ||
+          lowerColumn.includes("birth") ||
+          lowerColumn.includes("created") ||
+          lowerColumn.includes("updated")
+        )
+      ) {
+        const standardized =
+          standardizeDate(finalValue);
+
+        if (
+          standardized !== null &&
+          standardized !== finalValue
+        ) {
+          standardizedDates++;
+          normalizedCells++;
+          finalValue = standardized;
+        }
+      }
+
       // --------------------------------------
       // Lowercase emails
       // --------------------------------------
@@ -247,9 +607,10 @@ export function cleanCSV(
           finalValue.toLowerCase();
 
         if (normalized !== finalValue) {
-          normalizedCells++;
-          finalValue = normalized;
-        }
+  normalizedCells++;
+  normalizedEmails++;
+  finalValue = normalized;
+}
       }
 
      // Normalize phone numbers
@@ -279,9 +640,10 @@ if (
   }
 
   if (normalized !== finalValue) {
-    normalizedCells++;
-    finalValue = normalized;
-  }
+  normalizedCells++;
+  normalizedPhones++;
+  finalValue = normalized;
+}
 }
 
       // --------------------------------------
@@ -313,9 +675,10 @@ if (
             .join(" ");
 
         if (normalized !== finalValue) {
-          normalizedCells++;
-          finalValue = normalized;
-        }
+  normalizedCells++;
+  normalizedText++;
+  finalValue = normalized;
+}
       }
 
       cleanedRow[column] = finalValue;
@@ -324,14 +687,36 @@ if (
     return cleanedRow;
   });
 
+  const duplicateGroupResults =
+  Array.from(
+    duplicateGroups.entries()
+  )
+    .filter(
+      ([, group]) =>
+        group.rowIndexes.length > 1
+    )
+    .map(([key, group]) => ({
+      key,
+      columns: group.columns,
+      rowIndexes: group.rowIndexes,
+      count: group.rowIndexes.length,
+    }));
+
   return {
-    cleanedData,
-    removedDuplicates,
-    trimmedCells,
-    normalizedCells,
-    removedColumns,
-    removedEmptyRows,
-  };
+  cleanedData,
+  removedDuplicates,
+  trimmedCells,
+  normalizedCells,
+  normalizedEmails,
+  normalizedPhones,
+  normalizedText,
+  standardizedDates,
+  normalizedHeaders,
+  findReplaceCount,
+  removedColumns,
+  removedEmptyRows,
+  duplicateGroups: duplicateGroupResults,
+};
 }
 
 // --------------------------------------------
@@ -378,4 +763,33 @@ export function convertToCSV(
   );
 
   return [header, ...rows].join("\n");
+}
+
+export function convertToXLSX(
+  data: CSVRow[],
+  columns: string[]
+): ArrayBuffer {
+  const XLSX = require("xlsx");
+
+  const rows = [
+    columns,
+    ...data.map((row) =>
+      columns.map((column) => row[column] ?? "")
+    ),
+  ];
+
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "Cleaned Data"
+  );
+
+  return XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
 }

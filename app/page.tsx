@@ -6,13 +6,19 @@ import {
   analyzeCSV,
   AnalysisResult,
   CSVRow,
+  ValidationRule,
 } from "@/lib/analyzer";
 import {
   cleanCSV,
   CleaningOptions,
   CleaningResult,
   convertToCSV,
+  convertToXLSX,
 } from "@/lib/cleaner";
+import {
+  profileColumns,
+  ColumnProfile,
+} from "@/lib/columnDetector";
 
 const defaultOptions: CleaningOptions = {
   removeDuplicates: true,
@@ -20,20 +26,33 @@ const defaultOptions: CleaningOptions = {
   normalizeCapitalization: true,
   lowercaseEmails: true,
   normalizePhones: true,
+  standardizeDates: true,
+  normalizeHeaders: false,
+  findText: "",
+  replaceText: "",
+  findCaseSensitive: false,
+  findWholeCell: false,
   removeEmptyColumns: true,
   removeEmptyRows: false,
   duplicateMode: "row",
+  duplicateColumns: [],
 };
 
 export default function Home() {
   const [analysis, setAnalysis] =
     useState<AnalysisResult | null>(null);
+  
+  const [cleanedAnalysis, setCleanedAnalysis] =
+  useState<AnalysisResult | null>(null);
 
   const [fileName, setFileName] = useState("");
 
   const [data, setData] = useState<CSVRow[]>([]);
 
   const [columns, setColumns] = useState<string[]>([]);
+
+  const [columnProfiles, setColumnProfiles] =
+  useState<ColumnProfile[]>([]);
 
   const [cleaningResult, setCleaningResult] =
     useState<CleaningResult | null>(null);
@@ -42,6 +61,17 @@ export default function Home() {
     useState<CleaningOptions>(defaultOptions);
 
   const [showControls, setShowControls] = useState(true);
+
+  const [validationRules, setValidationRules] =
+    useState<ValidationRule[]>([]);
+
+  const [ruleColumn, setRuleColumn] = useState("");
+  const [ruleType, setRuleType] =
+    useState<ValidationRule["type"]>("email");
+  const [ruleMin, setRuleMin] = useState("");
+  const [ruleMax, setRuleMax] = useState("");
+  const [ruleAllowedValues, setRuleAllowedValues] =
+    useState("");
 
   const handleFileLoaded = (
     uploadedData: CSVRow[],
@@ -53,15 +83,23 @@ export default function Home() {
         : [];
 
     const result = analyzeCSV(
-      uploadedData,
-      detectedColumns
-    );
+  uploadedData,
+  detectedColumns,
+  validationRules
+);
+
+    const profiles = profileColumns(
+  uploadedData,
+  detectedColumns
+);
 
     setData(uploadedData);
     setColumns(detectedColumns);
+    setColumnProfiles(profiles);
     setFileName(uploadedFileName);
     setAnalysis(result);
     setCleaningResult(null);
+    setCleanedAnalysis(null);
     setOptions(defaultOptions);
     setShowControls(true);
   };
@@ -112,9 +150,15 @@ export default function Home() {
       sampleData,
       detectedColumns
     );
+    
+    const profiles = profileColumns(
+  sampleData,
+  detectedColumns
+);
 
     setData(sampleData);
     setColumns(detectedColumns);
+    setColumnProfiles(profiles);
     setFileName("cleanflow-sample.csv");
     setAnalysis(result);
     setCleaningResult(null);
@@ -145,18 +189,80 @@ export default function Home() {
     setCleaningResult(null);
   };
 
+  const addValidationRule = () => {
+  if (!ruleColumn) {
+    return;
+  }
+
+  const rule: ValidationRule = {
+    column: ruleColumn,
+    type: ruleType,
+  };
+
+  if (ruleType === "range") {
+    const min = Number(ruleMin);
+    const max = Number(ruleMax);
+
+    if (
+      ruleMin === "" ||
+      ruleMax === "" ||
+      !Number.isFinite(min) ||
+      !Number.isFinite(max) ||
+      min > max
+    ) {
+      return;
+    }
+
+    rule.min = min;
+    rule.max = max;
+  }
+
+  if (ruleType === "allowed-values") {
+    const allowedValues = ruleAllowedValues
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (allowedValues.length === 0) {
+      return;
+    }
+
+    rule.allowedValues = allowedValues;
+  }
+
+  setValidationRules((current) => [
+    ...current,
+    rule,
+  ]);
+
+  setRuleMin("");
+  setRuleMax("");
+  setRuleAllowedValues("");
+};
+
   const runCleaning = () => {
     if (!analysis || data.length === 0) {
       return;
     }
 
     const result = cleanCSV(
-      data,
-      columns,
-      options
-    );
+  data,
+  columns,
+  options
+);
 
-    setCleaningResult(result);
+const cleanedColumns =
+  result.cleanedData.length > 0
+    ? Object.keys(result.cleanedData[0])
+    : columns;
+
+const afterAnalysis = analyzeCSV(
+  result.cleanedData,
+  cleanedColumns
+);
+
+setCleaningResult(result);
+setCleanedAnalysis(afterAnalysis);
     setShowControls(false);
 
     setTimeout(() => {
@@ -212,12 +318,57 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadCleanedXLSX = () => {
+  if (
+    !cleaningResult ||
+    cleaningResult.cleanedData.length === 0
+  ) {
+    return;
+  }
+
+  const cleanedColumns = Object.keys(
+    cleaningResult.cleanedData[0]
+  );
+
+  const xlsxData = convertToXLSX(
+    cleaningResult.cleanedData,
+    cleanedColumns
+  );
+
+  const blob = new Blob([xlsxData], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+
+  link.href = url;
+
+  const originalName = fileName.replace(
+    /\.(csv|xlsx)$/i,
+    ""
+  );
+
+  link.download = `${originalName}-cleaned.xlsx`;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+};
+
   const resetApp = () => {
     setAnalysis(null);
     setFileName("");
     setData([]);
     setColumns([]);
+    setColumnProfiles([]);
     setCleaningResult(null);
+    setCleanedAnalysis(null);
     setOptions(defaultOptions);
     setShowControls(true);
 
@@ -226,6 +377,12 @@ export default function Home() {
       behavior: "smooth",
     });
   };
+  
+  const qualityImprovement =
+  analysis && cleanedAnalysis
+    ? cleanedAnalysis.cleanlinessScore -
+      analysis.cleanlinessScore
+    : 0;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -474,6 +631,134 @@ export default function Home() {
               </div>
             </div>
           </div>
+          
+          {/* ================================
+    COLUMN INTELLIGENCE
+================================= */}
+
+<div className="mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
+  <div>
+    <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
+      Column intelligence
+    </p>
+
+    <h2 className="mt-2 text-2xl font-bold">
+      Understand your columns
+    </h2>
+
+    <p className="mt-2 text-sm text-slate-500">
+      CleanFlow automatically profiles each column
+      and identifies potential data-quality issues.
+    </p>
+  </div>
+
+  <div className="mt-8 overflow-hidden rounded-2xl border border-slate-800">
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-left text-sm">
+        <thead className="bg-slate-800">
+          <tr>
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
+              Column
+            </th>
+
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
+              Type
+            </th>
+
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
+              Filled
+            </th>
+
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
+              Unique
+            </th>
+
+            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
+              Issues
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {columnProfiles.map((profile) => (
+            <tr
+              key={profile.name}
+              className="border-t border-slate-800"
+            >
+              <td className="whitespace-nowrap px-4 py-4 font-medium text-white">
+                {profile.name}
+              </td>
+
+              <td className="px-4 py-4">
+                <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium capitalize text-blue-300">
+                  {profile.type}
+                </span>
+              </td>
+
+              <td className="px-4 py-4">
+                <div className="min-w-[120px]">
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="text-slate-500">
+                      {profile.filledValues.toLocaleString()} /{" "}
+                      {profile.totalValues.toLocaleString()}
+                    </span>
+
+                    <span className="text-slate-300">
+                      {profile.fillRate}%
+                    </span>
+                  </div>
+
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="h-full rounded-full bg-emerald-500"
+                      style={{
+                        width: `${profile.fillRate}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </td>
+
+              <td className="whitespace-nowrap px-4 py-4 text-slate-300">
+                {profile.uniqueValues.toLocaleString()}
+              </td>
+
+              <td className="px-4 py-4">
+                {profile.invalidValues > 0 ||
+                profile.missingValues > 0 ||
+                profile.whitespaceIssues > 0 ? (
+                  <div className="space-y-1 text-xs">
+                    {profile.missingValues > 0 && (
+                      <p className="text-yellow-400">
+                        {profile.missingValues} missing
+                      </p>
+                    )}
+
+                    {profile.invalidValues > 0 && (
+                      <p className="text-red-400">
+                        {profile.invalidValues} invalid
+                      </p>
+                    )}
+
+                    {profile.whitespaceIssues > 0 && (
+                      <p className="text-orange-400">
+                        {profile.whitespaceIssues} whitespace
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs font-medium text-emerald-400">
+                    No issues detected
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
           {/* ================================
               CLEANING CONTROLS
@@ -583,6 +868,34 @@ export default function Home() {
   description="Remove unnecessary spaces, brackets, and symbols from phone numbers."
 />
 
+<CleaningCheckbox
+  checked={
+    options.standardizeDates
+  }
+  onChange={(value) =>
+    updateOption(
+      "standardizeDates",
+      value
+    )
+  }
+  title="Standardize dates"
+  description="Convert recognized dates to YYYY-MM-DD format."
+/>
+
+<CleaningCheckbox
+  checked={
+    options.normalizeHeaders
+  }
+  onChange={(value) =>
+    updateOption(
+      "normalizeHeaders",
+      value
+    )
+  }
+  title="Normalize column headers"
+  description="Convert messy column names into clean, consistent headers."
+/>
+
                   <CleaningCheckbox
                     checked={
                       options.removeEmptyColumns
@@ -610,7 +923,297 @@ export default function Home() {
                     title="Remove empty rows"
                     description="Delete rows where every cell is empty."
                   />
+
+                  <div className="md:col-span-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+  <div className="mb-4">
+    <h3 className="text-sm font-semibold text-white">
+      Custom validation rules
+    </h3>
+
+    <p className="mt-1 text-xs text-slate-400">
+      Define rules that your data should follow.
+    </p>
+  </div>
+
+  <div className="grid gap-3 md:grid-cols-3">
+    <select
+      value={ruleColumn}
+      onChange={(event) =>
+        setRuleColumn(event.target.value)
+      }
+      className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
+    >
+      <option value="">
+        Select column
+      </option>
+
+      {columns.map((column) => (
+        <option
+          key={column}
+          value={column}
+        >
+          {column}
+        </option>
+      ))}
+    </select>
+
+    <select
+      value={ruleType}
+      onChange={(event) =>
+        setRuleType(
+          event.target.value as ValidationRule["type"]
+        )
+      }
+      className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
+    >
+      <option value="email">
+        Email must be valid
+      </option>
+
+      <option value="number">
+        Value must be numeric
+      </option>
+
+      <option value="range">
+        Value must be within range
+      </option>
+
+      <option value="allowed-values">
+        Value must be allowed
+      </option>
+    </select>
+
+    <button
+      type="button"
+      onClick={addValidationRule}
+      disabled={!ruleColumn}
+      className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Add rule
+    </button>
+  </div>
+
+  {ruleType === "range" && (
+    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <input
+        type="number"
+        placeholder="Minimum"
+        value={ruleMin}
+        onChange={(event) =>
+          setRuleMin(event.target.value)
+        }
+        className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-blue-500"
+      />
+
+      <input
+        type="number"
+        placeholder="Maximum"
+        value={ruleMax}
+        onChange={(event) =>
+          setRuleMax(event.target.value)
+        }
+        className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-blue-500"
+      />
+    </div>
+  )}
+
+  {ruleType === "allowed-values" && (
+    <input
+      type="text"
+      placeholder="Allowed values, separated by commas"
+      value={ruleAllowedValues}
+      onChange={(event) =>
+        setRuleAllowedValues(
+          event.target.value
+        )
+      }
+      className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-blue-500"
+    />
+  )}
+
+  {validationRules.length > 0 && (
+    <div className="mt-5 space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Active rules
+      </p>
+
+      {validationRules.map((rule, index) => (
+        <div
+          key={`${rule.column}-${rule.type}-${index}`}
+          className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3"
+        >
+          <div>
+            <p className="text-sm font-medium text-white">
+              {rule.column}
+            </p>
+
+            <p className="text-xs text-slate-400">
+              {rule.type === "email" &&
+                "Email must be valid"}
+
+              {rule.type === "number" &&
+                "Value must be numeric"}
+
+              {rule.type === "range" &&
+                `Range: ${rule.min}–${rule.max}`}
+
+              {rule.type === "allowed-values" &&
+                `Allowed: ${rule.allowedValues?.join(", ")}`}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setValidationRules((current) =>
+                current.filter(
+                  (_, ruleIndex) =>
+                    ruleIndex !== index
+                )
+              )
+            }
+            className="text-xs font-medium text-red-400 hover:text-red-300"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
                 </div>
+
+                                  {/* =================================
+                      FIND & REPLACE
+                  ================================= */}
+
+                  <div className="md:col-span-2 mt-4 rounded-2xl border border-slate-800 bg-slate-950/50 p-5">
+                    <div className="mb-5">
+                      <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
+                        Find & Replace
+                      </p>
+
+                      <h3 className="mt-1 text-lg font-semibold text-white">
+                        Replace values across your data
+                      </h3>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Find a value and replace it throughout the
+                        spreadsheet before downloading.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label
+                          htmlFor="find-text"
+                          className="mb-2 block text-sm font-medium text-slate-300"
+                        >
+                          Find
+                        </label>
+
+                        <input
+                          id="find-text"
+                          type="text"
+                          value={options.findText}
+                          onChange={(event) =>
+                            updateOption(
+                              "findText",
+                              event.target.value
+                            )
+                          }
+                          placeholder="e.g. N/A"
+                          className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="replace-text"
+                          className="mb-2 block text-sm font-medium text-slate-300"
+                        >
+                          Replace with
+                        </label>
+
+                        <input
+                          id="replace-text"
+                          type="text"
+                          value={options.replaceText}
+                          onChange={(event) =>
+                            updateOption(
+                              "replaceText",
+                              event.target.value
+                            )
+                          }
+                          placeholder="e.g. Unknown"
+                          className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={
+                            options.findCaseSensitive
+                          }
+                          onChange={(event) =>
+                            updateOption(
+                              "findCaseSensitive",
+                              event.target.checked
+                            )
+                          }
+                          className="mt-1 h-4 w-4 accent-blue-500"
+                        />
+
+                        <span>
+                          <span className="block text-sm font-medium text-slate-200">
+                            Case sensitive
+                          </span>
+
+                          <span className="mt-1 block text-xs leading-5 text-slate-500">
+                            Match uppercase and lowercase letters exactly.
+                          </span>
+                        </span>
+                      </label>
+
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={
+                            options.findWholeCell
+                          }
+                          onChange={(event) =>
+                            updateOption(
+                              "findWholeCell",
+                              event.target.checked
+                            )
+                          }
+                          className="mt-1 h-4 w-4 accent-blue-500"
+                        />
+
+                        <span>
+                          <span className="block text-sm font-medium text-slate-200">
+                            Whole cell only
+                          </span>
+
+                          <span className="mt-1 block text-xs leading-5 text-slate-500">
+                            Replace only when the entire cell matches.
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+
+                    {options.findText !== "" && (
+                      <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3">
+                        <p className="text-xs text-blue-300">
+                          Find & Replace is ready. Matching values will be
+                          replaced when you clean the file.
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
                 {options.removeDuplicates && (
                   <div className="mt-8 border-t border-slate-800 pt-6">
@@ -623,7 +1226,7 @@ export default function Home() {
                       should be identified.
                     </p>
 
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <RadioOption
                         checked={
                           options.duplicateMode ===
@@ -668,7 +1271,97 @@ export default function Home() {
                         title="Phone"
                         description="Match using phone."
                       />
+
+                      <RadioOption
+  checked={
+    options.duplicateMode ===
+    "columns"
+  }
+  onClick={() =>
+    updateOption(
+      "duplicateMode",
+      "columns"
+    )
+  }
+  title="Multiple columns"
+  description="Match using selected columns."
+/>
                     </div>
+
+                    {options.duplicateMode === "columns" && (
+  <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/50 p-5">
+    <div>
+      <h4 className="font-semibold text-white">
+        Select duplicate columns
+      </h4>
+
+      <p className="mt-1 text-sm text-slate-500">
+        A row is considered a duplicate only when
+        all selected columns match.
+      </p>
+    </div>
+
+    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {columns.map((column) => {
+        const selected =
+          options.duplicateColumns.includes(
+            column
+          );
+
+        return (
+          <label
+            key={column}
+            className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
+              selected
+                ? "border-blue-500/40 bg-blue-500/10"
+                : "border-slate-800 bg-slate-900 hover:border-slate-700"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => {
+                const nextColumns = selected
+                  ? options.duplicateColumns.filter(
+                      (item) =>
+                        item !== column
+                    )
+                  : [
+                      ...options.duplicateColumns,
+                      column,
+                    ];
+
+                updateOption(
+                  "duplicateColumns",
+                  nextColumns
+                );
+              }}
+              className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-600 focus:ring-blue-500"
+            />
+
+            <span className="truncate text-sm text-slate-300">
+              {column}
+            </span>
+          </label>
+        );
+      })}
+    </div>
+
+    {options.duplicateColumns.length === 0 && (
+      <p className="mt-3 text-xs text-yellow-400">
+        Select at least one column. If none is
+        selected, CleanFlow will use the entire row.
+      </p>
+    )}
+
+    {options.duplicateColumns.length > 0 && (
+      <p className="mt-3 text-xs text-blue-400">
+        Matching on:{" "}
+        {options.duplicateColumns.join(" + ")}
+      </p>
+    )}
+  </div>
+)}
                   </div>
                 )}
 
@@ -687,6 +1380,441 @@ export default function Home() {
               </div>
             )}
           </div>
+
+{/* ================================
+    COLUMN DIAGNOSTICS
+================================= */}
+
+{analysis &&
+  analysis.columnDiagnostics.length > 0 && (
+    <div className="mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
+      <div className="mb-8">
+        <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
+          Column diagnostics
+        </p>
+
+        <h2 className="mt-2 text-2xl font-bold">
+          Understand every column
+        </h2>
+
+        <p className="mt-2 max-w-2xl text-sm text-slate-400">
+          CleanFlow profiles each column to identify
+          missing data, duplicates, formatting issues
+          and unusual values.
+        </p>
+
+        {/* ================================
+    ISSUE CATEGORIES
+================================= */}
+
+{analysis.issues.length > 0 && (
+  <div className="mb-8 grid gap-4 md:grid-cols-3">
+
+    {/* SAFE */}
+
+    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-emerald-400">
+            Safe to fix
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            CleanFlow can handle these automatically.
+          </p>
+        </div>
+
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-lg text-emerald-400">
+          ✓
+        </div>
+      </div>
+
+      <p className="mt-4 text-3xl font-bold text-white">
+        {
+          analysis.issues.filter(
+            (issue) => issue.severity === "safe"
+          ).length
+        }
+      </p>
+
+      <p className="mt-1 text-xs text-slate-500">
+        issue types detected
+      </p>
+    </div>
+
+    {/* REVIEW */}
+
+    <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-yellow-400">
+            Review recommended
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Check these before making changes.
+          </p>
+        </div>
+
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-500/10 text-lg text-yellow-400">
+          !
+        </div>
+      </div>
+
+      <p className="mt-4 text-3xl font-bold text-white">
+        {
+          analysis.issues.filter(
+            (issue) => issue.severity === "review"
+          ).length
+        }
+      </p>
+
+      <p className="mt-1 text-xs text-slate-500">
+        issue types detected
+      </p>
+    </div>
+
+    {/* ATTENTION */}
+
+    <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-red-400">
+            Needs attention
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Potentially serious data problems.
+          </p>
+        </div>
+
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10 text-lg text-red-400">
+          !
+        </div>
+      </div>
+
+      <p className="mt-4 text-3xl font-bold text-white">
+        {
+          analysis.issues.filter(
+            (issue) => issue.severity === "attention"
+          ).length
+        }
+      </p>
+
+      <p className="mt-1 text-xs text-slate-500">
+        issue types detected
+      </p>
+    </div>
+  </div>
+)}
+
+{analysis.issues.length > 0 && (
+  <div className="space-y-3">
+    {analysis.issues.map((issue) => {
+      const styles =
+        issue.severity === "safe"
+          ? {
+              border:
+                "border-emerald-500/20",
+              background:
+                "bg-emerald-500/5",
+              text:
+                "text-emerald-400",
+              badge:
+                "bg-emerald-500/10",
+              icon: "✓",
+            }
+          : issue.severity === "review"
+          ? {
+              border:
+                "border-yellow-500/20",
+              background:
+                "bg-yellow-500/5",
+              text:
+                "text-yellow-400",
+              badge:
+                "bg-yellow-500/10",
+              icon: "!",
+            }
+          : {
+              border:
+                "border-red-500/20",
+              background:
+                "bg-red-500/5",
+              text:
+                "text-red-400",
+              badge:
+                "bg-red-500/10",
+              icon: "!",
+            };
+
+      return (
+        <div
+          key={issue.type}
+          className={`rounded-2xl border ${styles.border} ${styles.background} p-5`}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${styles.badge} ${styles.text} font-bold`}
+              >
+                {styles.icon}
+              </div>
+
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-semibold text-white">
+                    {issue.label}
+                  </h3>
+
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-medium ${styles.badge} ${styles.text}`}
+                  >
+                    {issue.severity === "safe"
+                      ? "Safe to fix"
+                      : issue.severity === "review"
+                      ? "Review recommended"
+                      : "Needs attention"}
+                  </span>
+                </div>
+
+                <p className="mt-1 text-sm text-slate-400">
+                  {issue.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 text-left sm:text-right">
+              <p className="text-2xl font-bold text-white">
+                {issue.count}
+              </p>
+
+              <p className="text-xs text-slate-500">
+                affected
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
+
+{analysis.issues.length === 0 && (
+  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center">
+    <p className="font-semibold text-emerald-400">
+      No quality issues detected
+    </p>
+
+    <p className="mt-1 text-sm text-slate-500">
+      Your dataset looks clean based on the current checks.
+    </p>
+  </div>
+)}
+      </div>
+
+      <div className="space-y-4">
+        {analysis.columnDiagnostics.map(
+          (column) => (
+            <div
+              key={column.name}
+              className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5"
+            >
+              {/* COLUMN HEADER */}
+
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h3 className="text-lg font-semibold text-white">
+                      {column.name}
+                    </h3>
+
+                    <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-300">
+                      {column.detectedType}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    {column.totalValues.toLocaleString()} values
+                  </p>
+                </div>
+
+                <div className="text-left sm:text-right">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Completeness
+                  </p>
+
+                  <p
+                    className={`mt-1 text-2xl font-bold ${
+                      column.completeness >= 90
+                        ? "text-emerald-400"
+                        : column.completeness >= 70
+                        ? "text-yellow-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {column.completeness}%
+                  </p>
+                </div>
+              </div>
+
+              {/* COMPLETENESS BAR */}
+
+              <div className="mt-5">
+                <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className={`h-full rounded-full ${
+                      column.completeness >= 90
+                        ? "bg-emerald-500"
+                        : column.completeness >= 70
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
+                    }`}
+                    style={{
+                      width: `${column.completeness}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* METRICS */}
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-xs text-slate-500">
+                    Empty values
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-white">
+                    {column.emptyValues}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-xs text-slate-500">
+                    Unique values
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-white">
+                    {column.uniqueValues}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-xs text-slate-500">
+                    Uniqueness
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-white">
+                    {column.uniqueness}%
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-xs text-slate-500">
+                    Invalid values
+                  </p>
+
+                  <p
+                    className={`mt-1 text-xl font-bold ${
+                      column.invalidValues > 0
+                        ? "text-red-400"
+                        : "text-emerald-400"
+                    }`}
+                  >
+                    {column.invalidValues}
+                  </p>
+                </div>
+              </div>
+
+              {/* ISSUES */}
+
+              {(column.whitespaceIssues > 0 ||
+                column.capitalizationIssues > 0) && (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {column.whitespaceIssues > 0 && (
+                    <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
+                      <p className="text-sm font-medium text-yellow-300">
+                        Whitespace issues
+                      </p>
+
+                      <p className="mt-1 text-xs text-yellow-200/60">
+                        {column.whitespaceIssues} values contain
+                        extra whitespace.
+                      </p>
+                    </div>
+                  )}
+
+                  {column.capitalizationIssues > 0 && (
+                    <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
+                      <p className="text-sm font-medium text-yellow-300">
+                        Capitalization inconsistencies
+                      </p>
+
+                      <p className="mt-1 text-xs text-yellow-200/60">
+                        {column.capitalizationIssues} values
+                        use inconsistent capitalization.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TEXT LENGTH */}
+
+              {column.detectedType === "Text" && (
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+                    <span className="text-xs text-slate-500">
+                      Shortest
+                    </span>
+
+                    <span className="ml-2 font-semibold text-slate-200">
+                      {column.minLength} chars
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+                    <span className="text-xs text-slate-500">
+                      Longest
+                    </span>
+
+                    <span className="ml-2 font-semibold text-slate-200">
+                      {column.maxLength} chars
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* SAMPLE VALUES */}
+
+              {column.sampleValues.length > 0 && (
+                <div className="mt-5">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Sample values
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {column.sampleValues.map(
+                      (value, index) => (
+                        <span
+                          key={`${column.name}-${index}`}
+                          className="max-w-full truncate rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-300"
+                          title={value}
+                        >
+                          {value}
+                        </span>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  )}
 
           {/* ================================
               CLEANING RESULTS
@@ -712,6 +1840,146 @@ export default function Home() {
                     downloading your cleaned file.
                   </p>
                 </div>
+
+                {/* QUALITY IMPROVEMENT */}
+
+{analysis && cleanedAnalysis && (
+  <div className="mt-10 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6">
+    <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
+          Quality improvement
+        </p>
+
+        <h3 className="mt-2 text-2xl font-bold">
+          Your data quality changed
+        </h3>
+
+        <p className="mt-2 text-sm text-slate-400">
+          CleanFlow re-analyzed the dataset after
+          applying your selected cleaning rules.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="text-center">
+          <p className="text-xs uppercase tracking-wide text-slate-500">
+            Before
+          </p>
+
+          <p className="mt-1 text-3xl font-bold text-slate-300">
+            {analysis.cleanlinessScore}%
+          </p>
+        </div>
+
+        <span className="text-2xl text-slate-600">
+          →
+        </span>
+
+        <div className="text-center">
+          <p className="text-xs uppercase tracking-wide text-slate-500">
+            After
+          </p>
+
+          <p className="mt-1 text-3xl font-bold text-emerald-400">
+            {cleanedAnalysis.cleanlinessScore}%
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-6 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3">
+      <span className="text-sm text-slate-400">
+        Quality score change
+      </span>
+
+      <span
+        className={`font-bold ${
+          qualityImprovement > 0
+            ? "text-emerald-400"
+            : qualityImprovement < 0
+            ? "text-red-400"
+            : "text-slate-400"
+        }`}
+      >
+        {qualityImprovement > 0
+          ? "+"
+          : ""}
+        {qualityImprovement} points
+      </span>
+    </div>
+  </div>
+)}
+
+{/* DUPLICATE GROUPS */}
+
+{(cleaningResult.duplicateGroups ?? []).length > 0 && (
+  <div className="mt-8 rounded-2xl border border-orange-500/20 bg-orange-500/5 p-6">
+    <div>
+      <p className="text-sm font-semibold uppercase tracking-wider text-orange-400">
+        Duplicate review
+      </p>
+
+      <h3 className="mt-2 text-xl font-bold">
+        Duplicate groups detected
+      </h3>
+
+      <p className="mt-1 text-sm text-slate-400">
+        These groups contained matching values based
+        on your selected duplicate rule.
+      </p>
+    </div>
+
+    <div className="mt-5 space-y-3">
+      {(cleaningResult.duplicateGroups ?? [])
+  .slice(0, 10)
+  .map((group, index) => (
+          <div
+            key={`${group.key}-${index}`}
+            className="rounded-xl border border-slate-800 bg-slate-950/60 p-4"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-slate-200">
+                  Group {index + 1}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Matching columns:{" "}
+                  {group.columns.length > 0
+                    ? group.columns.join(" + ")
+                    : "Entire row"}
+                </p>
+              </div>
+
+              <span className="w-fit rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300">
+                {group.count} matching rows
+              </span>
+            </div>
+
+            <div className="mt-3 overflow-x-auto">
+              <div className="flex min-w-max gap-2">
+                {group.rowIndexes.map((rowIndex) => (
+                  <span
+                    key={rowIndex}
+                    className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400"
+                  >
+                    Original row {rowIndex + 2}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+    </div>
+
+    {(cleaningResult.duplicateGroups ?? []).length > 10 && (
+      <p className="mt-4 text-center text-xs text-slate-500">
+        Showing the first 10 duplicate groups.
+      </p>
+    )}
+  </div>
+)}
 
                 {/* BEFORE / AFTER */}
 
@@ -766,10 +2034,38 @@ export default function Home() {
     />
 
     <ChangeCard
+  icon="↔"
+  title="Find & Replace"
+  value={cleaningResult.findReplaceCount}
+/>
+
+    <ChangeCard
       icon="□"
       title="Empty rows removed"
       value={cleaningResult.removedEmptyRows}
     />
+  </div>
+</div>
+
+<div className="mt-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5">
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="font-semibold text-blue-300">
+        Total changes
+      </p>
+
+      <p className="mt-1 text-sm text-slate-400">
+        CleanFlow made these improvements to your dataset.
+      </p>
+    </div>
+
+    <div className="text-3xl font-bold text-white">
+      {cleaningResult.removedDuplicates +
+        cleaningResult.trimmedCells +
+        cleaningResult.normalizedCells +
+        cleaningResult.findReplaceCount +
+        cleaningResult.removedEmptyRows}
+    </div>
   </div>
 </div>
 
@@ -878,46 +2174,66 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* DOWNLOAD */}
+                {/* DOWNLOAD ACTIONS */}
 
-                <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                  <button
-                    onClick={
-                      downloadCleanedCSV
-                    }
-                    disabled={
-                      cleaningResult.cleanedData
-                        .length === 0
-                    }
-                    className="rounded-xl bg-emerald-600 px-8 py-4 font-semibold transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Download cleaned CSV
-                  </button>
+<div className="mt-14 border-t border-slate-800 pt-10">
+  <div className="mb-6 text-center">
+    <h3 className="text-xl font-bold">
+      Export your cleaned data
+    </h3>
 
-                  <button
-                    onClick={() => {
-                      setCleaningResult(null);
-                      setShowControls(true);
+    <p className="mt-2 text-sm text-slate-500">
+      Choose your preferred file format.
+    </p>
+  </div>
 
-                      setTimeout(() => {
-                        document
-                          .getElementById(
-                            "cleaning-controls"
-                          )
-                          ?.scrollIntoView({
-                            behavior: "smooth",
-                          });
-                      }, 100);
-                    }}
-                    className="rounded-xl border border-slate-700 px-8 py-4 font-medium text-slate-300 transition hover:border-slate-500 hover:text-white"
-                  >
-                    Change cleaning options
-                  </button>
-                </div>
+  <div className="mx-auto grid w-full max-w-3xl gap-4 sm:grid-cols-2">
+    {/* CSV */}
+    <button
+      onClick={downloadCleanedCSV}
+      disabled={
+        cleaningResult.cleanedData.length === 0
+      }
+      className="flex h-14 w-full items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Download cleaned CSV
+    </button>
 
-                <div className="mt-6 text-center text-xs text-emerald-400">
-                  Your CSV is processed locally in
-                  your browser.
+    {/* XLSX */}
+    <button
+      onClick={downloadCleanedXLSX}
+      disabled={
+        cleaningResult.cleanedData.length === 0
+      }
+      className="flex h-14 w-full items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Download Excel (.xlsx)
+    </button>
+  </div>
+
+  <div className="mx-auto mt-4 w-full max-w-3xl">
+    <button
+      onClick={() => {
+        setCleaningResult(null);
+        setShowControls(true);
+
+        setTimeout(() => {
+          document
+            .getElementById("cleaning-controls")
+            ?.scrollIntoView({
+              behavior: "smooth",
+            });
+        }, 100);
+      }}
+      className="flex h-14 w-full items-center justify-center rounded-xl border border-slate-700 px-6 font-medium text-slate-300 transition hover:border-slate-500 hover:bg-slate-800/50 hover:text-white"
+    >
+      Change cleaning options
+    </button>
+  </div>
+
+    <p className="mt-6 text-center text-xs text-emerald-400">
+    Your files are processed locally in your browser.
+  </p>
                 </div>
               </div>
             </div>
