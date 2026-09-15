@@ -631,134 +631,6 @@ setCleanedAnalysis(afterAnalysis);
               </div>
             </div>
           </div>
-          
-          {/* ================================
-    COLUMN INTELLIGENCE
-================================= */}
-
-<div className="mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
-  <div>
-    <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
-      Column intelligence
-    </p>
-
-    <h2 className="mt-2 text-2xl font-bold">
-      Understand your columns
-    </h2>
-
-    <p className="mt-2 text-sm text-slate-500">
-      CleanFlow automatically profiles each column
-      and identifies potential data-quality issues.
-    </p>
-  </div>
-
-  <div className="mt-8 overflow-hidden rounded-2xl border border-slate-800">
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-left text-sm">
-        <thead className="bg-slate-800">
-          <tr>
-            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
-              Column
-            </th>
-
-            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
-              Type
-            </th>
-
-            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
-              Filled
-            </th>
-
-            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
-              Unique
-            </th>
-
-            <th className="whitespace-nowrap px-4 py-3 font-semibold text-slate-200">
-              Issues
-            </th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {columnProfiles.map((profile) => (
-            <tr
-              key={profile.name}
-              className="border-t border-slate-800"
-            >
-              <td className="whitespace-nowrap px-4 py-4 font-medium text-white">
-                {profile.name}
-              </td>
-
-              <td className="px-4 py-4">
-                <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium capitalize text-blue-300">
-                  {profile.type}
-                </span>
-              </td>
-
-              <td className="px-4 py-4">
-                <div className="min-w-[120px]">
-                  <div className="mb-1 flex justify-between text-xs">
-                    <span className="text-slate-500">
-                      {profile.filledValues.toLocaleString()} /{" "}
-                      {profile.totalValues.toLocaleString()}
-                    </span>
-
-                    <span className="text-slate-300">
-                      {profile.fillRate}%
-                    </span>
-                  </div>
-
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                    <div
-                      className="h-full rounded-full bg-emerald-500"
-                      style={{
-                        width: `${profile.fillRate}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </td>
-
-              <td className="whitespace-nowrap px-4 py-4 text-slate-300">
-                {profile.uniqueValues.toLocaleString()}
-              </td>
-
-              <td className="px-4 py-4">
-                {profile.invalidValues > 0 ||
-                profile.missingValues > 0 ||
-                profile.whitespaceIssues > 0 ? (
-                  <div className="space-y-1 text-xs">
-                    {profile.missingValues > 0 && (
-                      <p className="text-yellow-400">
-                        {profile.missingValues} missing
-                      </p>
-                    )}
-
-                    {profile.invalidValues > 0 && (
-                      <p className="text-red-400">
-                        {profile.invalidValues} invalid
-                      </p>
-                    )}
-
-                    {profile.whitespaceIssues > 0 && (
-                      <p className="text-orange-400">
-                        {profile.whitespaceIssues} whitespace
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-xs font-medium text-emerald-400">
-                    No issues detected
-                  </span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
 
           {/* ================================
               CLEANING CONTROLS
@@ -1390,11 +1262,11 @@ setCleanedAnalysis(afterAnalysis);
     <div className="mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
-          Column diagnostics
+          Column insights
         </p>
 
         <h2 className="mt-2 text-2xl font-bold">
-          Understand every column
+          Understand your data
         </h2>
 
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
