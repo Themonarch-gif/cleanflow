@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@vercel/analytics";
 import FileUploader from "@/components/FileUploader";
 import {
   analyzeCSV,
@@ -77,6 +78,10 @@ export default function Home() {
     uploadedData: CSVRow[],
     uploadedFileName: string
   ) => {
+    track("file_uploaded", {
+  file_type: uploadedFileName.split(".").pop() || "unknown",
+});
+
     const detectedColumns =
       uploadedData.length > 0
         ? Object.keys(uploadedData[0])
@@ -98,6 +103,7 @@ export default function Home() {
     setColumnProfiles(profiles);
     setFileName(uploadedFileName);
     setAnalysis(result);
+    track("analysis_completed", { source: "upload" });
     setCleaningResult(null);
     setCleanedAnalysis(null);
     setOptions(defaultOptions);
@@ -105,6 +111,7 @@ export default function Home() {
   };
 
   const loadSampleCSV = () => {
+    track("sample_csv_used");
     const sampleData: CSVRow[] = [
       {
         Name: " John Smith ",
@@ -161,6 +168,7 @@ export default function Home() {
     setColumnProfiles(profiles);
     setFileName("cleanflow-sample.csv");
     setAnalysis(result);
+    track("analysis_completed", { source: "sample" });
     setCleaningResult(null);
     setOptions(defaultOptions);
     setShowControls(true);
@@ -262,7 +270,7 @@ const afterAnalysis = analyzeCSV(
 );
 
 setCleaningResult(result);
-setCleanedAnalysis(afterAnalysis);
+track("cleaning_completed", { duplicate_mode: options.duplicateMode });
     setShowControls(false);
 
     setTimeout(() => {
@@ -309,7 +317,8 @@ setCleanedAnalysis(afterAnalysis);
 
     link.download = `${originalName}-cleaned.csv`;
 
-    document.body.appendChild(link);
+    track("csv_downloaded");
+
 
     link.click();
 
@@ -351,6 +360,9 @@ setCleanedAnalysis(afterAnalysis);
   );
 
   link.download = `${originalName}-cleaned.xlsx`;
+
+    track("xlsx_downloaded");
+
 
   document.body.appendChild(link);
 
@@ -2548,3 +2560,10 @@ function StepCard({
     </div>
   );
 }
+
+
+
+
+
+
+
