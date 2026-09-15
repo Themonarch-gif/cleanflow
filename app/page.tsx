@@ -455,9 +455,11 @@ setCleanedAnalysis(afterAnalysis);
     </button>
   </div>
 
-  <p className="mt-3 text-center text-xs text-slate-500">
-    No file? Try CleanFlow with sample data first.
-  </p>
+  <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-500">
+  <span>✓ Runs in your browser</span>
+  <span>✓ No account required</span>
+  <span>✓ Your files stay private</span>
+</div>
 </div>
         </section>
       )}
@@ -1873,7 +1875,7 @@ setCleanedAnalysis(afterAnalysis);
                   />
                 </div>
 
-                {/* CHANGE SUMMARY */}
+{/* CHANGE SUMMARY */}
 
 <div className="mt-8">
   <div className="mb-4">
@@ -1886,7 +1888,7 @@ setCleanedAnalysis(afterAnalysis);
     </p>
   </div>
 
-  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <ChangeCard
       icon="↔"
       title="Duplicates removed"
@@ -1906,15 +1908,39 @@ setCleanedAnalysis(afterAnalysis);
     />
 
     <ChangeCard
-  icon="↔"
-  title="Find & Replace"
-  value={cleaningResult.findReplaceCount}
-/>
+      icon="✎"
+      title="Find & Replace"
+      value={cleaningResult.findReplaceCount}
+    />
 
     <ChangeCard
       icon="□"
       title="Empty rows removed"
       value={cleaningResult.removedEmptyRows}
+    />
+
+    <ChangeCard
+      icon="✓"
+      title="Email values fixed"
+      value={cleaningResult.normalizedEmails}
+    />
+
+    <ChangeCard
+      icon="☎"
+      title="Phone values fixed"
+      value={cleaningResult.normalizedPhones}
+    />
+
+    <ChangeCard
+      icon="📅"
+      title="Dates standardized"
+      value={cleaningResult.standardizedDates}
+    />
+
+    <ChangeCard
+      icon="↔"
+      title="Headers normalized"
+      value={cleaningResult.normalizedHeaders}
     />
   </div>
 </div>
@@ -1936,7 +1962,11 @@ setCleanedAnalysis(afterAnalysis);
         cleaningResult.trimmedCells +
         cleaningResult.normalizedCells +
         cleaningResult.findReplaceCount +
-        cleaningResult.removedEmptyRows}
+        cleaningResult.removedEmptyRows +
+        cleaningResult.normalizedEmails +
+        cleaningResult.normalizedPhones +
+        cleaningResult.standardizedDates +
+        cleaningResult.normalizedHeaders}
     </div>
   </div>
 </div>

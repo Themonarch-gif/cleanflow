@@ -13,28 +13,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CleanFlow — Clean Your CSV Data",
+  title: "CleanFlow - Clean Your CSV Data",
   description:
-    "Clean, analyze, and improve your CSV spreadsheets instantly. Your data is processed locally in your browser.",
+    "Clean, analyze, and improve your CSV spreadsheets instantly. CleanFlow helps you remove duplicates, fix messy data, and improve data quality directly in your browser.",
   applicationName: "CleanFlow",
   keywords: [
     "CSV cleaner",
     "CSV cleaning",
     "data cleaning",
     "spreadsheet cleaner",
-    "duplicate remover",
     "CSV analyzer",
+    "duplicate remover",
     "data quality",
+    "spreadsheet data cleaning",
   ],
   icons: {
-  icon: "/cleanflow-favicon.png",
-  shortcut: "/cleanflow-favicon.png",
-  apple: "/cleanflow-favicon.png",
-},
+    icon: "/cleanflow-favicon.png",
+    shortcut: "/cleanflow-favicon.png",
+    apple: "/cleanflow-favicon.png",
+  },
   openGraph: {
-    title: "CleanFlow — Clean Your CSV Data",
+    title: "CleanFlow - Clean Your CSV Data",
     description:
-      "Clean, analyze and improve your CSV files in seconds.",
+      "Clean, analyze, and improve your CSV files in seconds.",
     siteName: "CleanFlow",
     type: "website",
   },
