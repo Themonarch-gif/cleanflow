@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { track } from "@vercel/analytics";
 import FileUploader from "@/components/FileUploader";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   analyzeCSV,
   AnalysisResult,
@@ -37,6 +38,7 @@ const defaultOptions: CleaningOptions = {
   removeEmptyRows: false,
   duplicateMode: "row",
   duplicateColumns: [],
+  columnsToRemove: [],
 };
 
 export default function Home() {
@@ -397,36 +399,40 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
     : 0;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
       {/* ================================
           NAVIGATION
       ================================= */}
 
-      <nav className="border-b border-slate-800/80">
+      <nav className="border-b border-slate-200 dark:border-slate-800/80">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <button
-  onClick={resetApp}
-  className="flex items-center"
->
-  <img
-    src="/cleanflow-logo.png"
-    alt="CleanFlow"
-    className="h-12 w-auto object-contain"
-  />
-</button>
-
-          <button
-            onClick={() =>
-              document
-                .getElementById("how-it-works")
-                ?.scrollIntoView({
-                  behavior: "smooth",
-                })
-            }
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white"
+            onClick={resetApp}
+            className="flex items-center"
           >
-            How it works
+            <img
+              src="/cleanflow-logo.png"
+              alt="CleanFlow"
+              className="h-12 w-auto object-contain"
+            />
           </button>
+
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              onClick={() =>
+                document
+                  .getElementById("how-it-works")
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+              }
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 transition hover:border-slate-400 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-white"
+            >
+              How it works
+            </button>
+
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
 
@@ -436,7 +442,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
       {!analysis && (
         <section className="mx-auto max-w-5xl px-6 pb-20 pt-20 text-center">
-          <div className="mx-auto mb-6 inline-flex rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm text-blue-300">
+          <div className="mx-auto mb-6 inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
             Smart spreadsheet cleaning
           </div>
 
@@ -447,7 +453,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
             </span>
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-400">
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-400">
             Detect duplicates, missing values,
             formatting problems and other common
             spreadsheet issues in seconds.
@@ -461,16 +467,16 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
   <div className="mt-4 flex items-center justify-center">
     <button
       onClick={loadSampleCSV}
-      className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-blue-500/50 hover:bg-slate-800 hover:text-white"
+      className="rounded-xl border border-slate-300 bg-slate-100 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-blue-500/50 hover:bg-slate-200 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
     >
       Try a sample CSV
     </button>
   </div>
 
   <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-500">
-  <span>✓ Runs in your browser</span>
-  <span>✓ No account required</span>
-  <span>✓ Your files stay private</span>
+  <span>? Runs in your browser</span>
+  <span>? No account required</span>
+  <span>? Your files stay private</span>
 </div>
 </div>
         </section>
@@ -496,7 +502,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                 {fileName}
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
                 {analysis.totalRows.toLocaleString()}{" "}
                 rows · {analysis.totalColumns} columns
               </p>
@@ -504,7 +510,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
             <button
               onClick={resetApp}
-              className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:text-white"
+              className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-white"
             >
               Upload another file
             </button>
@@ -517,7 +523,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
           <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
             {/* SCORE CARD */}
 
-            <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 dark:border-slate-800 dark:bg-slate-900">
               <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
                 Data quality
               </p>
@@ -533,7 +539,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                   Grade {analysis.qualityGrade}
                 </h2>
 
-                <p className="mt-1 text-slate-400">
+                <p className="mt-1 text-slate-600 dark:text-slate-400">
                   {analysis.qualityLabel}
                 </p>
               </div>
@@ -544,12 +550,12 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                     Quality score
                   </span>
 
-                  <span className="font-semibold text-slate-300">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
                     {analysis.cleanlinessScore}%
                   </span>
                 </div>
 
-                <div className="h-3 overflow-hidden rounded-full bg-slate-800">
+                <div className="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                   <div
                     className={`h-full rounded-full transition-all duration-700 ${
                       analysis.cleanlinessScore >=
@@ -576,7 +582,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
             {/* ISSUE REPORT */}
 
-            <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900">
               <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
                 Quality report
               </p>
@@ -585,7 +591,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                 Issues found
               </h2>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-500">
                 CleanFlow checked your spreadsheet
                 for common data-quality problems.
               </p>
@@ -652,7 +658,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
           <div
             id="cleaning-controls"
-            className="mt-8 overflow-hidden rounded-3xl border border-slate-800 bg-slate-900"
+            className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
           >
             <button
               onClick={() =>
@@ -671,7 +677,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                   Choose what to clean
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
                   You stay in control of every change.
                 </p>
               </div>
@@ -682,7 +688,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
             </button>
 
             {showControls && (
-              <div className="border-t border-slate-800 px-6 py-6">
+              <div className="border-t border-slate-200 px-6 py-6 dark:border-slate-800">
                 <div className="grid gap-4 md:grid-cols-2">
                   <CleaningCheckbox
                     checked={
@@ -796,6 +802,71 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                     description="Remove columns containing no useful values."
                   />
 
+                  <div className="md:col-span-2 rounded-2xl border border-sky-200 bg-sky-50 p-5 dark:border-sky-900/70 dark:bg-slate-950/60">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                        Column Management
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                        Select columns you do not want in the cleaned file. At least one column must remain.
+                      </p>
+                      <p className="mt-2 text-xs font-medium text-sky-800 dark:text-sky-300">
+                        {Math.max(0, columns.length - options.columnsToRemove.length)} of {columns.length} columns will be kept
+                      </p>
+                    </div>
+
+                    {columns.length === 0 ? (
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        No columns are available to manage.
+                      </p>
+                    ) : (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {columns.map((column) => {
+                          const selected = options.columnsToRemove.includes(column);
+                          const remainingAfterSelection = columns.length - options.columnsToRemove.length;
+                          const disableRemoval = !selected && remainingAfterSelection <= 1;
+
+                          return (
+                            <label
+                              key={column}
+                              className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm ${
+                                selected
+                                  ? "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"
+                                  : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300"
+                              } ${disableRemoval ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                disabled={disableRemoval}
+                                onChange={(event) => {
+                                  const nextColumnsToRemove = event.target.checked
+                                    ? [...options.columnsToRemove, column]
+                                    : options.columnsToRemove.filter((item) => item !== column);
+                                  updateOption("columnsToRemove", nextColumnsToRemove);
+                                }}
+                                className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                              />
+                              <span className="min-w-0 flex-1 break-words">{column}</span>
+                              {selected && (
+                                <span className="text-xs font-semibold">Will remove</span>
+                              )}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {options.columnsToRemove.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => updateOption("columnsToRemove", [])}
+                        className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+                      >
+                        Clear column selections
+                      </button>
+                    )}
+                  </div>
+
                   <CleaningCheckbox
                     checked={
                       options.removeEmptyRows
@@ -810,13 +881,13 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                     description="Delete rows where every cell is empty."
                   />
 
-                  <div className="md:col-span-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+                  <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
   <div className="mb-4">
-    <h3 className="text-sm font-semibold text-white">
+    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
       Custom validation rules
     </h3>
 
-    <p className="mt-1 text-xs text-slate-400">
+    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
       Define rules that your data should follow.
     </p>
   </div>
@@ -827,7 +898,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
       onChange={(event) =>
         setRuleColumn(event.target.value)
       }
-      className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
+      className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
     >
       <option value="">
         Select column
@@ -850,7 +921,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
           event.target.value as ValidationRule["type"]
         )
       }
-      className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
+      className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
     >
       <option value="email">
         Email must be valid
@@ -888,7 +959,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
         onChange={(event) =>
           setRuleMin(event.target.value)
         }
-        className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-blue-500"
+        className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
       />
 
       <input
@@ -898,7 +969,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
         onChange={(event) =>
           setRuleMax(event.target.value)
         }
-        className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-blue-500"
+        className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
       />
     </div>
   )}
@@ -913,7 +984,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
           event.target.value
         )
       }
-      className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-blue-500"
+      className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
     />
   )}
 
@@ -925,15 +996,15 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
       {validationRules.map((rule, index) => (
         <div
-          key={`${rule.column}-${rule.type}-${index}`}
-          className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3"
-        >
+  key={`${rule.column}-${rule.type}-${index}`}
+  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70"
+>
           <div>
-            <p className="text-sm font-medium text-white">
+          <p className="text-sm font-medium text-slate-900 dark:text-white">
               {rule.column}
             </p>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               {rule.type === "email" &&
                 "Email must be valid"}
 
@@ -973,17 +1044,17 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                       FIND & REPLACE
                   ================================= */}
 
-                  <div className="md:col-span-2 mt-4 rounded-2xl border border-slate-800 bg-slate-950/50 p-5">
+                  <div className="md:col-span-2 mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/50">
                     <div className="mb-5">
                       <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
                         Find & Replace
                       </p>
 
-                      <h3 className="mt-1 text-lg font-semibold text-white">
+                      <h3 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
                         Replace values across your data
                       </h3>
 
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
                         Find a value and replace it throughout the
                         spreadsheet before downloading.
                       </p>
@@ -993,7 +1064,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                       <div>
                         <label
                           htmlFor="find-text"
-                          className="mb-2 block text-sm font-medium text-slate-300"
+                          className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                         >
                           Find
                         </label>
@@ -1009,14 +1080,14 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                             )
                           }
                           placeholder="e.g. N/A"
-                          className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                          className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-600"
                         />
                       </div>
 
                       <div>
                         <label
                           htmlFor="replace-text"
-                          className="mb-2 block text-sm font-medium text-slate-300"
+                          className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                         >
                           Replace with
                         </label>
@@ -1032,13 +1103,13 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                             )
                           }
                           placeholder="e.g. Unknown"
-                          className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                          className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-600"
                         />
                       </div>
                     </div>
 
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-slate-700">
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700">
                         <input
                           type="checkbox"
                           checked={
@@ -1054,7 +1125,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                         />
 
                         <span>
-                          <span className="block text-sm font-medium text-slate-200">
+                          <span className="block text-sm font-medium text-slate-800 dark:text-slate-200">
                             Case sensitive
                           </span>
 
@@ -1064,7 +1135,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                         </span>
                       </label>
 
-                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-slate-700">
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-100 p-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700">
                         <input
                           type="checkbox"
                           checked={
@@ -1080,7 +1151,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                         />
 
                         <span>
-                          <span className="block text-sm font-medium text-slate-200">
+                          <span className="block text-sm font-medium text-slate-800 dark:text-slate-200">
                             Whole cell only
                           </span>
 
@@ -1102,12 +1173,12 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                   </div>
 
                 {options.removeDuplicates && (
-                  <div className="mt-8 border-t border-slate-800 pt-6">
+                  <div className="mt-8 border-t border-slate-200 pt-6 dark:border-slate-800">
                     <h3 className="font-semibold">
                       Duplicate matching
                     </h3>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
                       Choose how duplicate records
                       should be identified.
                     </p>
@@ -1175,13 +1246,13 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                     </div>
 
                     {options.duplicateMode === "columns" && (
-  <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/50 p-5">
+  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/50">
     <div>
-      <h4 className="font-semibold text-white">
+      <h4 className="font-semibold text-slate-900 dark:text-white">
         Select duplicate columns
       </h4>
 
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
         A row is considered a duplicate only when
         all selected columns match.
       </p>
@@ -1198,10 +1269,10 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
           <label
             key={column}
             className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
-              selected
-                ? "border-blue-500/40 bg-blue-500/10"
-                : "border-slate-800 bg-slate-900 hover:border-slate-700"
-            }`}
+  selected
+    ? "border-blue-500/40 bg-blue-500/10"
+    : "border-slate-300 bg-white hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+}`}
           >
             <input
               type="checkbox"
@@ -1222,10 +1293,10 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                   nextColumns
                 );
               }}
-              className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
             />
 
-            <span className="truncate text-sm text-slate-300">
+            <span className="truncate text-sm text-slate-800 dark:text-slate-300">
               {column}
             </span>
           </label>
@@ -1251,7 +1322,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                   </div>
                 )}
 
-                <div className="mt-8 flex flex-col items-center border-t border-slate-800 pt-8">
+                <div className="mt-8 flex flex-col items-center border-t border-slate-200 pt-8 dark:border-slate-800">
                   <button
                     onClick={runCleaning}
                     className="w-full rounded-xl bg-blue-600 px-8 py-4 font-semibold shadow-lg shadow-blue-600/20 transition hover:bg-blue-500 sm:w-auto"
@@ -1273,7 +1344,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
 {analysis &&
   analysis.columnDiagnostics.length > 0 && (
-    <div className="mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
+    <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
           Column insights
@@ -1283,7 +1354,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
           Understand your data
         </h2>
 
-        <p className="mt-2 max-w-2xl text-sm text-slate-400">
+        <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           CleanFlow profiles each column to identify
           missing data, duplicates, formatting issues
           and unusual values.
@@ -1298,10 +1369,10 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
     {/* SAFE */}
 
-    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-emerald-400">
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
             Safe to fix
           </p>
 
@@ -1315,7 +1386,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
         </div>
       </div>
 
-      <p className="mt-4 text-3xl font-bold text-white">
+      <p className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">
         {
           analysis.issues.filter(
             (issue) => issue.severity === "safe"
@@ -1330,10 +1401,10 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
     {/* REVIEW */}
 
-    <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5">
+    <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 dark:border-yellow-500/20 dark:bg-yellow-500/5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-yellow-400">
+        <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-400">
             Review recommended
           </p>
 
@@ -1347,7 +1418,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
         </div>
       </div>
 
-      <p className="mt-4 text-3xl font-bold text-white">
+      <p className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">
         {
           analysis.issues.filter(
             (issue) => issue.severity === "review"
@@ -1362,10 +1433,10 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
     {/* ATTENTION */}
 
-    <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-500/20 dark:bg-red-500/5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-red-400">
+          <p className="text-sm font-semibold text-red-700 dark:text-red-400">
             Needs attention
           </p>
 
@@ -1379,7 +1450,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
         </div>
       </div>
 
-      <p className="mt-4 text-3xl font-bold text-white">
+      <p className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">
         {
           analysis.issues.filter(
             (issue) => issue.severity === "attention"
@@ -1398,41 +1469,41 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
   <div className="space-y-3">
     {analysis.issues.map((issue) => {
       const styles =
-        issue.severity === "safe"
-          ? {
-              border:
-                "border-emerald-500/20",
-              background:
-                "bg-emerald-500/5",
-              text:
-                "text-emerald-400",
-              badge:
-                "bg-emerald-500/10",
-              icon: "✓",
-            }
-          : issue.severity === "review"
-          ? {
-              border:
-                "border-yellow-500/20",
-              background:
-                "bg-yellow-500/5",
-              text:
-                "text-yellow-400",
-              badge:
-                "bg-yellow-500/10",
-              icon: "!",
-            }
-          : {
-              border:
-                "border-red-500/20",
-              background:
-                "bg-red-500/5",
-              text:
-                "text-red-400",
-              badge:
-                "bg-red-500/10",
-              icon: "!",
-            };
+  issue.severity === "safe"
+    ? {
+        border:
+          "border-emerald-200 dark:border-emerald-500/20",
+        background:
+          "bg-emerald-50 dark:bg-emerald-500/5",
+        text:
+          "text-emerald-700 dark:text-emerald-400",
+        badge:
+          "bg-emerald-100 dark:bg-emerald-500/10",
+        icon: "✓",
+      }
+    : issue.severity === "review"
+    ? {
+        border:
+          "border-yellow-200 dark:border-yellow-500/20",
+        background:
+          "bg-yellow-50 dark:bg-yellow-500/5",
+        text:
+          "text-yellow-700 dark:text-yellow-400",
+        badge:
+          "bg-yellow-100 dark:bg-yellow-500/10",
+        icon: "!",
+      }
+    : {
+        border:
+          "border-red-200 dark:border-red-500/20",
+        background:
+          "bg-red-50 dark:bg-red-500/5",
+        text:
+          "text-red-700 dark:text-red-400",
+        badge:
+          "bg-red-100 dark:bg-red-500/10",
+        icon: "!",
+      };
 
       return (
         <div
@@ -1449,7 +1520,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold text-white">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">
                     {issue.label}
                   </h3>
 
@@ -1464,14 +1535,14 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                   </span>
                 </div>
 
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                   {issue.description}
                 </p>
               </div>
             </div>
 
             <div className="shrink-0 text-left sm:text-right">
-              <p className="text-2xl font-bold text-white">
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">
                 {issue.count}
               </p>
 
@@ -1488,11 +1559,11 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
 {analysis.issues.length === 0 && (
   <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center">
-    <p className="font-semibold text-emerald-400">
+    <p className="font-semibold text-emerald-600 dark:text-emerald-400">
       No quality issues detected
     </p>
 
-    <p className="mt-1 text-sm text-slate-500">
+    <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
       Your dataset looks clean based on the current checks.
     </p>
   </div>
@@ -1504,14 +1575,14 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
           (column) => (
             <div
               key={column.name}
-              className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5"
+              className="rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/60 p-5"
             >
               {/* COLUMN HEADER */}
 
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-lg font-semibold text-white">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
                       {column.name}
                     </h3>
 
@@ -1547,7 +1618,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
               {/* COMPLETENESS BAR */}
 
               <div className="mt-5">
-                <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                   <div
                     className={`h-full rounded-full ${
                       column.completeness >= 90
@@ -1566,37 +1637,37 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
               {/* METRICS */}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70 p-4">
                   <p className="text-xs text-slate-500">
                     Empty values
                   </p>
 
-                  <p className="mt-1 text-xl font-bold text-white">
+                  <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
                     {column.emptyValues}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70 p-4">
                   <p className="text-xs text-slate-500">
                     Unique values
                   </p>
 
-                  <p className="mt-1 text-xl font-bold text-white">
+                  <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
                     {column.uniqueValues}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70 p-4">
                   <p className="text-xs text-slate-500">
                     Uniqueness
                   </p>
 
-                  <p className="mt-1 text-xl font-bold text-white">
+                  <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
                     {column.uniqueness}%
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70 p-4">
                   <p className="text-xs text-slate-500">
                     Invalid values
                   </p>
@@ -1650,22 +1721,22 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
               {column.detectedType === "Text" && (
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+                  <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70 px-4 py-3">
                     <span className="text-xs text-slate-500">
                       Shortest
                     </span>
 
-                    <span className="ml-2 font-semibold text-slate-200">
+                    <span className="ml-2 font-semibold text-slate-900 dark:text-slate-200">
                       {column.minLength} chars
                     </span>
                   </div>
 
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+                  <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70 px-4 py-3">
                     <span className="text-xs text-slate-500">
                       Longest
                     </span>
 
-                    <span className="ml-2 font-semibold text-slate-200">
+                    <span className="ml-2 font-semibold text-slate-900 dark:text-slate-200">
                       {column.maxLength} chars
                     </span>
                   </div>
@@ -1685,7 +1756,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                       (value, index) => (
                         <span
                           key={`${column.name}-${index}`}
-                          className="max-w-full truncate rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-300"
+                          className="max-w-full truncate rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300"
                           title={value}
                         >
                           {value}
@@ -1721,7 +1792,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                     Your data is cleaner
                   </h2>
 
-                  <p className="mt-2 text-slate-400">
+                  <p className="mt-2 text-slate-600 dark:text-slate-400">
                     Review the changes before
                     downloading your cleaned file.
                   </p>
@@ -1741,7 +1812,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
           Your data quality changed
         </h3>
 
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           CleanFlow re-analyzed the dataset after
           applying your selected cleaning rules.
         </p>
@@ -1753,7 +1824,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
             Before
           </p>
 
-          <p className="mt-1 text-3xl font-bold text-slate-300">
+          <p className="mt-1 text-3xl font-bold text-slate-900 dark:text-slate-300">
             {analysis.cleanlinessScore}%
           </p>
         </div>
@@ -1774,8 +1845,8 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
       </div>
     </div>
 
-    <div className="mt-6 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3">
-      <span className="text-sm text-slate-400">
+    <div className="mt-6 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/50 px-4 py-3">
+      <span className="text-sm text-slate-600 dark:text-slate-400">
         Quality score change
       </span>
 
@@ -1822,11 +1893,11 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
   .map((group, index) => (
           <div
             key={`${group.key}-${index}`}
-            className="rounded-xl border border-slate-800 bg-slate-950/60 p-4"
+            className="rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/60 p-4"
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-slate-200">
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
                   Group {index + 1}
                 </p>
 
@@ -1848,7 +1919,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                 {group.rowIndexes.map((rowIndex) => (
                   <span
                     key={rowIndex}
-                    className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400"
                   >
                     Original row {rowIndex + 2}
                   </span>
@@ -1895,7 +1966,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
       Cleaning summary
     </h3>
 
-    <p className="mt-1 text-sm text-slate-500">
+    <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
       Here is exactly what CleanFlow changed.
     </p>
   </div>
@@ -1932,6 +2003,12 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
     />
 
     <ChangeCard
+      icon="▥"
+      title="Columns removed"
+      value={cleaningResult.removedColumns.length}
+    />
+
+    <ChangeCard
       icon="✓"
       title="Email values fixed"
       value={cleaningResult.normalizedEmails}
@@ -1964,17 +2041,18 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
         Total changes
       </p>
 
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
         CleanFlow made these improvements to your dataset.
       </p>
     </div>
 
-    <div className="text-3xl font-bold text-white">
+    <div className="text-3xl font-bold text-slate-900 dark:text-white">
       {cleaningResult.removedDuplicates +
         cleaningResult.trimmedCells +
         cleaningResult.normalizedCells +
         cleaningResult.findReplaceCount +
         cleaningResult.removedEmptyRows +
+        cleaningResult.removedColumns.length +
         cleaningResult.normalizedEmails +
         cleaningResult.normalizedPhones +
         cleaningResult.standardizedDates +
@@ -1987,7 +2065,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
                 {cleaningResult
                   .removedColumns.length > 0 && (
-                  <div className="mt-6 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5">
+                  <div className="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-5 dark:border-yellow-500/20 dark:bg-yellow-500/5">
                     <p className="font-semibold text-yellow-300">
                       Empty columns removed
                     </p>
@@ -2008,7 +2086,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                       Cleaned data preview
                     </h3>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
                       Showing the first 10 rows.
                     </p>
                   </div>
@@ -2049,7 +2127,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
                                     key={
                                       rowIndex
                                     }
-                                    className="border-t border-slate-800"
+                                    className="border-t border-slate-200 dark:border-slate-800"
                                   >
                                     {Object.keys(
                                       cleaningResult.cleanedData[0]
@@ -2090,13 +2168,13 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
                 {/* DOWNLOAD ACTIONS */}
 
-<div className="mt-14 border-t border-slate-800 pt-10">
+<div className="mt-14 border-t border-slate-200 dark:border-slate-800 pt-10">
   <div className="mb-6 text-center">
     <h3 className="text-xl font-bold">
       Export your cleaned data
     </h3>
 
-    <p className="mt-2 text-sm text-slate-500">
+    <p className="mt-2 text-sm text-slate-600 dark:text-slate-500">
       Choose your preferred file format.
     </p>
   </div>
@@ -2161,7 +2239,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
 
       <section
         id="how-it-works"
-        className="border-t border-slate-800 px-6 py-20"
+        className="border-t border-slate-200 dark:border-slate-800 px-6 py-20"
       >
         <div className="mx-auto max-w-6xl">
           <div className="text-center">
@@ -2207,7 +2285,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
       ================================= */}
 
       <section className="px-6 py-20">
-        <div className="mx-auto max-w-4xl rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-center sm:p-12">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60 p-8 text-center sm:p-12">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-xl">
             Lock
           </div>
@@ -2229,7 +2307,7 @@ track("cleaning_completed", { duplicate_mode: options.duplicateMode });
           FOOTER
       ================================= */}
 
-      <footer className="border-t border-slate-800 px-6 py-8">
+      <footer className="border-t border-slate-200 dark:border-slate-800 px-6 py-8">
         <div className="mx-auto max-w-6xl text-center text-sm text-slate-500">
           CleanFlow — Cleaner data, less work.
         </div>
@@ -2330,9 +2408,9 @@ function IssueCard({
   const clean = value === 0;
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70 p-4">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-sm font-bold text-slate-300">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 text-sm font-bold text-slate-300 dark:bg-slate-800">
           {icon}
         </div>
 
@@ -2376,7 +2454,7 @@ function CleaningCheckbox({
   description: string;
 }) {
   return (
-    <label className="flex cursor-pointer gap-4 rounded-2xl border border-slate-800 bg-slate-950 p-5 transition hover:border-slate-700">
+    <label className="flex cursor-pointer gap-4 rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 p-5 transition hover:border-slate-700">
       <input
         type="checkbox"
         checked={checked}
@@ -2421,7 +2499,7 @@ function RadioOption({
       className={`rounded-2xl border p-4 text-left transition ${
         checked
           ? "border-blue-500 bg-blue-500/10"
-          : "border-slate-800 bg-slate-950 hover:border-slate-700"
+          : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 hover:border-slate-700"
       }`}
     >
       <div className="flex items-center gap-3">
@@ -2469,7 +2547,7 @@ function BeforeAfterCard({
       className={`rounded-2xl border p-6 ${
         positive
           ? "border-emerald-500/20 bg-emerald-500/5"
-          : "border-slate-800 bg-slate-950"
+          : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
       }`}
     >
       <p
@@ -2509,7 +2587,7 @@ function ChangeCard({
   value: number;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70 p-5">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-sm font-bold text-emerald-400">
         {icon}
       </div>
@@ -2560,10 +2638,3 @@ function StepCard({
     </div>
   );
 }
-
-
-
-
-
-
-

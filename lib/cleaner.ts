@@ -24,6 +24,7 @@ export interface CleaningOptions {
   | "columns";
 
   duplicateColumns: string[];
+  columnsToRemove: string[];
 }
 
 export interface DuplicateGroup {
@@ -196,21 +197,49 @@ export function cleanCSV(
 
   let workingData = [...data];
 
-    // ----------------------------------------
-  // 0. Normalize column headers
+  // ----------------------------------------
+  // 0. Apply manual column management
   // ----------------------------------------
 
-  let workingColumns = [...columns];
+  const requestedColumnsToRemove = new Set(
+    options.columnsToRemove ?? []
+  );
+
+  const columnsToActuallyRemove = columns.filter(
+    (column) => requestedColumnsToRemove.has(column)
+  );
+
+  // Never allow column management to remove every column.
+  const removableColumns = columns.length > 1
+    ? columnsToActuallyRemove.filter((column) =>
+        columns.some(
+          (otherColumn) =>
+            otherColumn !== column &&
+            !requestedColumnsToRemove.has(otherColumn)
+        )
+      )
+    : [];
+
+  const removableColumnSet = new Set(removableColumns);
+  const removedColumns: string[] = [...removableColumns];
+  let workingColumns = columns.filter(
+    (column) => !removableColumnSet.has(column)
+  );
+
+  // ----------------------------------------
+  // 1. Normalize column headers
+  // ----------------------------------------
 
   if (options.normalizeHeaders) {
-    const normalizedColumns = workingColumns.map(
+    const originalColumns = [...workingColumns];
+    const normalizedColumns = originalColumns.map(
       normalizeHeader
     );
 
     const headerMap = new Map<string, string>();
 
     normalizedColumns.forEach((header, index) => {
-      const originalHeader = workingColumns[index];
+      const originalHeader = originalColumns[index];
 
       let finalHeader = header;
 
@@ -238,9 +267,9 @@ export function cleanCSV(
     workingData = workingData.map((row) => {
       const normalizedRow: CSVRow = {};
 
-      workingColumns.forEach(
-        (normalizedHeader, index) => {
-          const originalHeader = columns[index];
+      originalColumns.forEach(
+        (originalHeader, index) => {
+          const normalizedHeader = workingColumns[index];
 
           normalizedRow[normalizedHeader] =
             row[originalHeader] ?? "";
@@ -465,8 +494,6 @@ else {
   // ----------------------------------------
   // 3. Remove empty columns
   // ----------------------------------------
-
-  const removedColumns: string[] = [];
 
   let usefulColumns = [...workingColumns];
 
